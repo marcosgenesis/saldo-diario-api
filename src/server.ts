@@ -8,7 +8,12 @@ const fastify = Fastify();
 fastify.register(fastifyCors, {
   origin: process.env.CLIENT_ORIGIN || "http://localhost:3000",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Access-Control-Allow-Origin",
+  ],
   credentials: true,
   maxAge: 86400,
 });
