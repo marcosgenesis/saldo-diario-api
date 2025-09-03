@@ -26,7 +26,8 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:cMLefqlrnWZhfqgJAWrujRaraLLSBDph@interchange.proxy.rlwy.net:28238/railway
       CLIENT_ORIGIN: https://app.saldodiario.com.br
-      API_URL: https://api.saldodiario.com.br
+      BETTER_AUTH_URL: https://api.saldodiario.com.br
+      BETTER_AUTH_SECRET: PrH1evfw8KhdRSe8THoUiM5x2KqOOxtQ
     ports:
       - "4000:4000"
     depends_on:

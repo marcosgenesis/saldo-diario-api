@@ -55,6 +55,16 @@ fastify.route({
       reply.status(response.status);
 
       response.headers.forEach((value, key) => reply.header(key, value));
+      reply.header("Access-Control-Allow-Origin", origin);
+      reply.header("Access-Control-Allow-Credentials", "true");
+      reply.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS"
+      );
+      reply.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-Requested-With"
+      );
       reply.send(response.body ? await response.text() : null);
     } catch (error: any) {
       console.error("Authentication Error:", error);
