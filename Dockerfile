@@ -7,6 +7,10 @@ RUN npm install -g pnpm
 # Definir diretório de trabalho
 WORKDIR /app
 
+# Recebe DATABASE_URL em tempo de build (opcional) e define como ENV
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
+
 # Copiar arquivos de dependências
 COPY package.json pnpm-lock.yaml ./
 
@@ -16,8 +20,8 @@ RUN pnpm install --frozen-lockfile
 # Copiar código fonte
 COPY . .
 
-# Gerar build da aplicação
-RUN pnpm run build
+# Gerar build da aplicação e executar migrações
+RUN pnpm run build && pnpm run db:migrate
 
 # Expor porta 4000
 EXPOSE 4000
