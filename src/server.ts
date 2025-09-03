@@ -8,7 +8,12 @@ const fastify = Fastify();
 fastify.register(fastifyCors, {
   origin: [process.env.CLIENT_ORIGIN || "http://localhost:3000"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Access-Control-Allow-Origin",
+  ],
   credentials: true,
   maxAge: 86400,
 });
@@ -27,7 +32,6 @@ fastify.route({
 
       console.log(`Auth request: ${request.method} ${request.url}`);
       console.log("Headers:", request.headers);
-
       // Construct request URL
       const url = new URL(request.url, `http://${request.headers.host}`);
 
