@@ -1,6 +1,5 @@
 import { and, eq, gte, lte } from "drizzle-orm";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { nanoid } from "nanoid";
 import { z } from "zod";
 import { db } from "../../db/client";
 import { balance, expense, income } from "../../db/schema";
@@ -62,7 +61,7 @@ export class BalanceController {
 
       console.log({ amount, startDate, endDate, userId: request.user.id });
       const response = await createBalanceUseCase.execute({
-        amount,
+        amount: amount.toString(),
         startDate: startDate,
         endDate: endDate,
         userId: request.user.id,
@@ -252,8 +251,7 @@ export class BalanceController {
       const newExpense = await db
         .insert(expense)
         .values({
-          id: nanoid(),
-          amount,
+          amount: amount.toString(),
           description,
           date: new Date(date),
           balanceId,
@@ -282,8 +280,7 @@ export class BalanceController {
       const newIncome = await db
         .insert(income)
         .values({
-          id: nanoid(),
-          amount,
+          amount: amount.toString(),
           description,
           date: new Date(date),
           balanceId,

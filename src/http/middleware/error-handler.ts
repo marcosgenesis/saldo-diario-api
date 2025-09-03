@@ -1,6 +1,11 @@
 import { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { ZodError } from "zod";
-import { AppError } from "../../errors/app-error";
+import {
+  AppError,
+  DatabaseError,
+  ForbiddenError,
+  InternalServerError,
+} from "../../errors/app-error";
 import { ApiResponseBuilder } from "../../utils/api-response";
 
 export async function errorHandler(
@@ -52,10 +57,7 @@ export async function errorHandler(
 
   // Tratar erros de autorização
   if (error.statusCode === 403) {
-    return ApiResponseBuilder.error(
-      reply,
-      new AppError("Acesso negado", 403, "FORBIDDEN")
-    );
+    return ApiResponseBuilder.error(reply, new ForbiddenError());
   }
 
   // Tratar erros de not found
@@ -85,19 +87,15 @@ export async function errorHandler(
 
   // Tratar outros erros de banco de dados
   if (error.code?.startsWith("ER_") || error.code?.startsWith("SQLITE_")) {
-    return ApiResponseBuilder.error(
-      reply,
-      new AppError("Erro de banco de dados", 500, "DATABASE_ERROR"),
-      { originalError: error.message }
-    );
+    return ApiResponseBuilder.error(reply, new DatabaseError(), {
+      originalError: error.message,
+    });
   }
 
   // Erro genérico para casos não tratados
-  return ApiResponseBuilder.error(
-    reply,
-    new AppError("Erro interno do servidor", 500, "INTERNAL_ERROR"),
-    { originalError: error.message }
-  );
+  return ApiResponseBuilder.error(reply, new InternalServerError(), {
+    originalError: error.message,
+  });
 }
 
 // Middleware para capturar erros assíncronos

@@ -16,7 +16,7 @@ export class CreateBalanceUseCase {
       );
     }
 
-    if (balance.amount <= 0) {
+    if (Number(balance.amount) <= 0) {
       throw new ValidationError("O valor deve ser maior que zero");
     }
 

@@ -1,0 +1,148 @@
+import { addDays, differenceInDays, isSameDay, isWithinInterval, startOfDay, } from "date-fns";
+import { and, eq, gte, lte } from "drizzle-orm";
+import { db } from "../../db/client";
+import { balance, expense, income } from "../../db/schema";
+import { ConflictError, DatabaseError, NotFoundError, } from "../../errors/app-error";
+export class DrizzleBalanceRepository {
+    async createBalance({ id, amount, startDate, endDate, userId, }) {
+        const findExistingBalance = await this.findBalanceByPeriod(startDate, endDate);
+        console.log({ findExistingBalance: findExistingBalance.length });
+        if (findExistingBalance.length > 0) {
+            throw new ConflictError("Já existe um saldo para este período");
+        }
+        const newBalance = await db
+            .insert(balance)
+            .values({ id, amount, startDate, endDate, userId })
+            .returning();
+        return newBalance[0];
+    }
+    async findBalanceByPeriod(startDate, endDate) {
+        const findBalance = await db
+            .select()
+            .from(balance)
+            .where(and(gte(balance.startDate, startDate), lte(balance.endDate, endDate)))
+            .orderBy(balance.startDate);
+        return findBalance;
+    }
+    async getBalanceById(id) {
+        try {
+            const result = await db
+                .select()
+                .from(balance)
+                .where(eq(balance.id, id))
+                .limit(1);
+            return result[0] || null;
+        }
+        catch (error) {
+            throw new DatabaseError(`Erro ao buscar saldo por ID: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+        }
+    }
+    async getUserBalances(userId) {
+        try {
+            return await db
+                .select()
+                .from(balance)
+                .where(eq(balance.userId, userId))
+                .orderBy(balance.startDate);
+        }
+        catch (error) {
+            throw new DatabaseError(`Erro ao buscar saldos do usuário: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+        }
+    }
+    async updateBalance(balanceData) {
+        try {
+            const result = await db
+                .update(balance)
+                .set(balanceData)
+                .where(eq(balance.id, balanceData.id))
+                .returning();
+            if (result.length === 0) {
+                throw new NotFoundError("Saldo não encontrado para atualização");
+            }
+            return result[0];
+        }
+        catch (error) {
+            if (error instanceof NotFoundError)
+                throw error;
+            throw new DatabaseError(`Erro ao atualizar saldo: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+        }
+    }
+    async deleteBalance(id) {
+        try {
+            const result = await db
+                .delete(balance)
+                .where(eq(balance.id, id))
+                .returning();
+            if (result.length === 0) {
+                throw new NotFoundError("Saldo não encontrado para exclusão");
+            }
+        }
+        catch (error) {
+            if (error instanceof NotFoundError)
+                throw error;
+            throw new DatabaseError(`Erro ao deletar saldo: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+        }
+    }
+    async getDailyBalancesByPeriod(startDate, endDate, balanceId) {
+        // Buscar saldos no período
+        const balance = await this.getBalanceById(balanceId);
+        if (!balance)
+            return [];
+        // Para cada saldo, buscar suas transações e calcular os dias
+        const results = [];
+        const [expensesRows, incomesRows] = await Promise.all([
+            db.select().from(expense).where(eq(expense.balanceId, balanceId)),
+            db.select().from(income).where(eq(income.balanceId, balanceId)),
+        ]);
+        const start = startOfDay(new Date(balance.startDate));
+        const end = startOfDay(new Date(balance.endDate));
+        const totalDaysInclusive = Math.max(1, differenceInDays(end, start) + 1);
+        const baseDailyBalance = Number(balance.amount) / totalDaysInclusive;
+        // Construir lista de datas do período
+        const allDates = [];
+        let currentDate = start;
+        let currentEndDate = end;
+        const today = startOfDay(new Date());
+        console.log({ currentDate, currentEndDate });
+        while (!isSameDay(currentDate, addDays(currentEndDate, 1))) {
+            allDates.push(currentDate);
+            currentDate = addDays(currentDate, 1);
+        }
+        // Acumular saldo até o dia anterior ao primeiro exibido (aqui usamos todos)
+        let accumulatedBalance = 0;
+        for (const date of allDates) {
+            const dayExpenses = expensesRows.filter((e) => isSameDay(e.date, date));
+            const dayIncomes = incomesRows.filter((i) => isSameDay(i.date, date));
+            const totalExpensesAmount = dayExpenses.reduce((acc, e) => acc + Number(e.amount), 0);
+            const totalIncomesAmount = dayIncomes.reduce((acc, i) => acc + Number(i.amount), 0);
+            const totalAvailable = baseDailyBalance + accumulatedBalance + totalIncomesAmount;
+            const remaining = totalAvailable - totalExpensesAmount;
+            results.push({
+                balanceId: balance.id,
+                date,
+                baseBalance: baseDailyBalance,
+                previousDayLeftover: accumulatedBalance,
+                expenses: dayExpenses.map((e) => ({
+                    id: e.id,
+                    amount: Number(e.amount),
+                    description: e.description,
+                    date: e.date,
+                    balanceId: e.balanceId,
+                })),
+                incomes: dayIncomes.map((i) => ({
+                    id: i.id,
+                    amount: Number(i.amount),
+                    description: i.description,
+                    date: i.date,
+                    balanceId: i.balanceId,
+                })),
+                totalAvailable,
+                remainingBalance: remaining,
+            });
+            accumulatedBalance = remaining;
+        }
+        console.log({ results });
+        const filteredResults = results.filter((result) => isWithinInterval(result.date, { start: startDate, end: endDate }));
+        return filteredResults;
+    }
+}

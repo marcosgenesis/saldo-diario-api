@@ -13,20 +13,16 @@ export class DrizzleExpenseRepository implements ExpenseRepository {
     date,
     balanceId,
   }: CreateExpenseSchema): Promise<ListExpensesSchema> {
-    try {
-      const result = await db
-        .insert(expense)
-        .values({
-          amount,
-          description,
-          balanceId,
-          date: new Date(date),
-        })
-        .returning();
-      return result[0];
-    } catch (error) {
-      console.log({ error });
-    }
+    const result = await db
+      .insert(expense)
+      .values({
+        amount,
+        description,
+        balanceId,
+        date: new Date(date),
+      })
+      .returning();
+    return result[0];
   }
   getExpensesByBalanceId(balanceId: string): Promise<ListExpensesSchema[]> {
     throw new Error("Method not implemented.");
