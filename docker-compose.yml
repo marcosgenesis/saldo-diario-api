@@ -25,7 +25,8 @@ services:
     container_name: saldo-diario-api
     environment:
       DATABASE_URL: postgresql://postgres:cMLefqlrnWZhfqgJAWrujRaraLLSBDph@interchange.proxy.rlwy.net:28238/railway
-      CLIENT_ORIGIN: https://saldo-diario.vercel.app/
+      CLIENT_ORIGIN: https://app.saldodiario.com.br
+      API_URL: https://api.saldodiario.com.br
     ports:
       - "4000:4000"
     depends_on:

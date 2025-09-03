@@ -6,24 +6,28 @@ import { registerRoutes } from "./http/routes/index.js";
 
 const fastify = Fastify();
 fastify.register(fastifyCors, {
-  origin: process.env.CLIENT_ORIGIN || "http://localhost:3000",
+  origin: [process.env.CLIENT_ORIGIN || "http://localhost:3000"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Access-Control-Allow-Origin",
-  ],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   credentials: true,
   maxAge: 86400,
 });
 
 // Register authentication endpoint
 fastify.route({
-  method: ["GET", "POST"],
+  method: ["GET", "POST", "OPTIONS"],
   url: "/api/auth/*",
   async handler(request, reply) {
     try {
+      // Handle preflight OPTIONS request
+      if (request.method === "OPTIONS") {
+        reply.status(200).send();
+        return;
+      }
+
+      console.log(`Auth request: ${request.method} ${request.url}`);
+      console.log("Headers:", request.headers);
+
       // Construct request URL
       const url = new URL(request.url, `http://${request.headers.host}`);
 
@@ -45,6 +49,7 @@ fastify.route({
 
       // Forward response to client
       reply.status(response.status);
+
       response.headers.forEach((value, key) => reply.header(key, value));
       reply.send(response.body ? await response.text() : null);
     } catch (error: any) {
