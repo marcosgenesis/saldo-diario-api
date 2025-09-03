@@ -1,0 +1,1 @@
+ALTER TABLE "balance" DROP COLUMN "payment_date";

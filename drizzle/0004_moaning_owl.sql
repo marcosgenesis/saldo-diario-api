@@ -1,0 +1,1 @@
+ALTER TABLE "balance" ALTER COLUMN "amount" SET DATA TYPE numeric(12, 2);
