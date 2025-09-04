@@ -1,4 +1,3 @@
-import fastifyCors from "@fastify/cors";
 import "dotenv/config";
 import Fastify from "fastify";
 import { auth } from "./auth"; // Your configured Better Auth instance
@@ -12,18 +11,18 @@ fastify.get("/", (request, reply) => {
 const allowedOrigin =
   process.env.CLIENT_ORIGIN || "https://app.saldodiario.com.br";
 console.log(allowedOrigin);
-fastify.register(fastifyCors, {
-  origin: [allowedOrigin],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Access-Control-Allow-Origin",
-  ],
-  credentials: true,
-  maxAge: 86400,
-});
+// fastify.register(fastifyCors, {
+//   origin: [allowedOrigin],
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   allowedHeaders: [
+//     "Content-Type",
+//     "Authorization",
+//     "X-Requested-With",
+//     "Access-Control-Allow-Origin",
+//   ],
+//   credentials: true,
+//   maxAge: 86400,
+// });
 
 // Register authentication endpoint
 fastify.route({
