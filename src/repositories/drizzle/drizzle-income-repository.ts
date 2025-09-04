@@ -25,6 +25,20 @@ export class DrizzleIncomeRepository implements IncomeRepository {
     return result[0];
   }
 
+  async createIncomesBulk(
+    incomesToCreate: CreateIncomeSchema[]
+  ): Promise<ListIncomesSchema[]> {
+    if (incomesToCreate.length === 0) return [];
+    const normalized = incomesToCreate.map((i) => ({
+      amount: i.amount,
+      description: i.description,
+      balanceId: i.balanceId,
+      date: new Date(i.date as unknown as string | number | Date),
+    }));
+    const result = await db.insert(income).values(normalized).returning();
+    return result;
+  }
+
   getIncomesByBalanceId(balanceId: string): Promise<ListIncomesSchema[]> {
     throw new Error("Method not implemented.");
   }

@@ -10,6 +10,9 @@ export type ListExpensesSchema = z.infer<typeof listExpensesSchema>;
 
 export interface ExpenseRepository {
   createExpense(expense: CreateExpenseSchema): Promise<ListExpensesSchema>;
+  createExpensesBulk(
+    expenses: CreateExpenseSchema[]
+  ): Promise<ListExpensesSchema[]>;
   getExpensesByBalanceId(balanceId: string): Promise<ListExpensesSchema[]>;
   getExpenseById(id: string): Promise<ListExpensesSchema>;
   updateExpense(expense: CreateExpenseSchema): Promise<ListExpensesSchema>;

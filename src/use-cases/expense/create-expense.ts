@@ -11,3 +11,13 @@ export class CreateExpenseUseCase {
     return this.expenseRepository.createExpense(expense);
   }
 }
+
+export class CreateExpensesBulkUseCase {
+  constructor(private expenseRepository: ExpenseRepository) {}
+
+  async execute(
+    expenses: CreateExpenseSchema[]
+  ): Promise<ListExpensesSchema[]> {
+    return this.expenseRepository.createExpensesBulk(expenses);
+  }
+}

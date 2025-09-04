@@ -1,7 +1,10 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import z from "zod";
 import { DrizzleIncomeRepository } from "../../repositories/drizzle/drizzle-income-repository";
-import { CreateIncomeUseCase } from "../../use-cases/income/create-income";
+import {
+  CreateIncomeUseCase,
+  CreateIncomesBulkUseCase,
+} from "../../use-cases/income/create-income";
 import { ApiResponseBuilder } from "../../utils";
 import { asyncErrorHandler } from "../middleware/error-handler";
 
@@ -34,6 +37,37 @@ export class IncomeController {
         reply,
         income,
         "Receita criada com sucesso",
+        201
+      );
+    }
+  );
+
+  static createIncomesBulk = asyncErrorHandler(
+    async (
+      request: FastifyRequest<{
+        Body: z.infer<typeof createIncomeSchema>[];
+      }>,
+      reply: FastifyReply
+    ) => {
+      const incomes = request.body;
+
+      const useCase = new CreateIncomesBulkUseCase(
+        new DrizzleIncomeRepository()
+      );
+
+      const created = await useCase.execute(
+        incomes.map((i) => ({
+          amount: i.amount.toString(),
+          description: i.description,
+          date: i.date,
+          balanceId: i.balanceId,
+        }))
+      );
+
+      return ApiResponseBuilder.success(
+        reply,
+        created,
+        "Receitas criadas com sucesso",
         201
       );
     }

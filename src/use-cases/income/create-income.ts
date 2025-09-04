@@ -11,3 +11,11 @@ export class CreateIncomeUseCase {
     return this.incomeRepository.createIncome(income);
   }
 }
+
+export class CreateIncomesBulkUseCase {
+  constructor(private incomeRepository: IncomeRepository) {}
+
+  async execute(incomes: CreateIncomeSchema[]): Promise<ListIncomesSchema[]> {
+    return this.incomeRepository.createIncomesBulk(incomes);
+  }
+}

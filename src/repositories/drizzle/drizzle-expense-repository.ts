@@ -24,6 +24,19 @@ export class DrizzleExpenseRepository implements ExpenseRepository {
       .returning();
     return result[0];
   }
+  async createExpensesBulk(
+    expensesToCreate: CreateExpenseSchema[]
+  ): Promise<ListExpensesSchema[]> {
+    if (expensesToCreate.length === 0) return [];
+    const normalized = expensesToCreate.map((e) => ({
+      amount: e.amount,
+      description: e.description,
+      balanceId: e.balanceId,
+      date: new Date(e.date as unknown as string | number | Date),
+    }));
+    const result = await db.insert(expense).values(normalized).returning();
+    return result;
+  }
   getExpensesByBalanceId(balanceId: string): Promise<ListExpensesSchema[]> {
     throw new Error("Method not implemented.");
   }

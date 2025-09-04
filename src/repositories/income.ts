@@ -10,6 +10,9 @@ export type ListIncomesSchema = z.infer<typeof listIncomesSchema>;
 
 export interface IncomeRepository {
   createIncome(income: CreateIncomeSchema): Promise<ListIncomesSchema>;
+  createIncomesBulk(
+    incomes: CreateIncomeSchema[]
+  ): Promise<ListIncomesSchema[]>;
   getIncomesByBalanceId(balanceId: string): Promise<ListIncomesSchema[]>;
   getIncomeById(id: string): Promise<ListIncomesSchema>;
   updateIncome(income: CreateIncomeSchema): Promise<ListIncomesSchema>;

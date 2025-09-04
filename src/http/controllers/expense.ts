@@ -1,7 +1,10 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import z from "zod";
 import { DrizzleExpenseRepository } from "../../repositories/drizzle/drizzle-expense-repository";
-import { CreateExpenseUseCase } from "../../use-cases/expense/create-expense";
+import {
+  CreateExpenseUseCase,
+  CreateExpensesBulkUseCase,
+} from "../../use-cases/expense/create-expense";
 import { ApiResponseBuilder } from "../../utils";
 import { asyncErrorHandler } from "../middleware/error-handler";
 
@@ -34,6 +37,37 @@ export class ExpenseController {
         reply,
         expense,
         "Despesa criada com sucesso",
+        201
+      );
+    }
+  );
+
+  static createExpensesBulk = asyncErrorHandler(
+    async (
+      request: FastifyRequest<{
+        Body: z.infer<typeof createExpenseSchema>[];
+      }>,
+      reply: FastifyReply
+    ) => {
+      const expenses = request.body;
+
+      const useCase = new CreateExpensesBulkUseCase(
+        new DrizzleExpenseRepository()
+      );
+
+      const created = await useCase.execute(
+        expenses.map((e) => ({
+          amount: e.amount.toString(),
+          description: e.description,
+          date: e.date,
+          balanceId: e.balanceId,
+        }))
+      );
+
+      return ApiResponseBuilder.success(
+        reply,
+        created,
+        "Despesas criadas com sucesso",
         201
       );
     }
