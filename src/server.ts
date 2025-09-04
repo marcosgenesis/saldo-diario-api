@@ -6,9 +6,11 @@ import { errorHandler } from "./http/middleware/error-handler.js";
 import { registerRoutes } from "./http/routes/index.js";
 
 const fastify = Fastify();
-console.log(process.env.CLIENT_ORIGIN);
+const allowedOrigin =
+  process.env.CLIENT_ORIGIN || "https://app.saldodiario.com.br";
+console.log(allowedOrigin);
 fastify.register(fastifyCors, {
-  origin: [process.env.CLIENT_ORIGIN || "http://localhost:3000"],
+  origin: [allowedOrigin],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
@@ -57,7 +59,7 @@ fastify.route({
       reply.status(response.status);
 
       response.headers.forEach((value, key) => reply.header(key, value));
-      reply.header("Access-Control-Allow-Origin", origin);
+      reply.header("Access-Control-Allow-Origin", allowedOrigin);
       reply.header("Access-Control-Allow-Credentials", "true");
       reply.header(
         "Access-Control-Allow-Methods",
