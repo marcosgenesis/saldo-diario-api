@@ -1,3 +1,4 @@
+import fastifyCors from "@fastify/cors";
 import "dotenv/config";
 import Fastify from "fastify";
 import { auth } from "./auth"; // Your configured Better Auth instance
@@ -11,18 +12,18 @@ fastify.get("/", (request, reply) => {
 const allowedOrigin =
   process.env.CLIENT_ORIGIN || "https://app.saldodiario.com.br";
 console.log(allowedOrigin);
-// fastify.register(fastifyCors, {
-//   origin: [allowedOrigin],
-//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-//   allowedHeaders: [
-//     "Content-Type",
-//     "Authorization",
-//     "X-Requested-With",
-//     "Access-Control-Allow-Origin",
-//   ],
-//   credentials: true,
-//   maxAge: 86400,
-// });
+fastify.register(fastifyCors, {
+  origin: [allowedOrigin],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Access-Control-Allow-Origin",
+  ],
+  credentials: true,
+  maxAge: 86400,
+});
 
 // Register authentication endpoint
 fastify.route({
@@ -89,10 +90,13 @@ fastify.setErrorHandler(errorHandler);
 await registerRoutes(fastify);
 
 // Initialize server
-fastify.listen({ port: 4000 }, (err) => {
-  if (err) {
-    console.error(err);
-    process.exit(1);
+fastify.listen(
+  { port: Number(process.env.PORT) || 4000, host: "0.0.0.0" },
+  (err) => {
+    if (err) {
+      console.error(err);
+      process.exit(1);
+    }
+    console.log(`Server running on port ${process.env.PORT || 4000}`);
   }
-  console.log("Server running on port 4000");
-});
+);

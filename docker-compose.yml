@@ -28,6 +28,7 @@ services:
       CLIENT_ORIGIN: https://app.saldodiario.com.br
       BETTER_AUTH_URL: https://api.saldodiario.com.br
       BETTER_AUTH_SECRET: PrH1evfw8KhdRSe8THoUiM5x2KqOOxtQ
+      BETTER_AUTH_BASE_URL: https://api.saldodiario.com.br
     ports:
       - "4000:4000"
     depends_on:
