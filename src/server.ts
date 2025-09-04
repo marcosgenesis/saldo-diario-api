@@ -1,4 +1,5 @@
 import fastifyCors from "@fastify/cors";
+import "dotenv/config";
 import Fastify from "fastify";
 import { auth } from "./auth"; // Your configured Better Auth instance
 import { errorHandler } from "./http/middleware/error-handler.js";
