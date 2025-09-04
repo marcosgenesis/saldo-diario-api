@@ -6,6 +6,9 @@ import { errorHandler } from "./http/middleware/error-handler.js";
 import { registerRoutes } from "./http/routes/index.js";
 
 const fastify = Fastify();
+fastify.get("/", (request, reply) => {
+  reply.send("Hello World");
+});
 const allowedOrigin =
   process.env.CLIENT_ORIGIN || "https://app.saldodiario.com.br";
 console.log(allowedOrigin);
