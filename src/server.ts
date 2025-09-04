@@ -6,6 +6,7 @@ import { errorHandler } from "./http/middleware/error-handler.js";
 import { registerRoutes } from "./http/routes/index.js";
 
 const fastify = Fastify();
+console.log(process.env.CLIENT_ORIGIN);
 fastify.register(fastifyCors, {
   origin: [process.env.CLIENT_ORIGIN || "http://localhost:3000"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
