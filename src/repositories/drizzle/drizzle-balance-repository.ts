@@ -3,7 +3,6 @@ import {
   differenceInDays,
   isSameDay,
   isWithinInterval,
-  startOfDay,
 } from "date-fns";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { db } from "../../db/client";
@@ -14,6 +13,13 @@ import {
   NotFoundError,
 } from "../../errors/app-error";
 import {
+  getUserTimezone,
+  isSameDayInTimezone,
+  processIncomingDate,
+  processOutgoingDate,
+  startOfDayInTimezone,
+} from "../../utils/date-utils";
+import {
   BalanceRepository,
   CreateBalanceSchema,
   DailyBalanceRow,
@@ -21,6 +27,16 @@ import {
 } from "../balance";
 
 export class DrizzleBalanceRepository implements BalanceRepository {
+  async getTodayBalance(userId: string): Promise<SelectBalance> {
+    const today = startOfDayInTimezone(new Date(), getUserTimezone());
+    const findBalance = await db
+      .select()
+      .from(balance)
+      .where(and(eq(balance.userId, userId), gte(balance.startDate, today)))
+      .orderBy(balance.startDate);
+    return findBalance[0];
+  }
+
   async createBalance({
     id,
     amount,
@@ -28,9 +44,13 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     endDate,
     userId,
   }: CreateBalanceSchema): Promise<SelectBalance> {
+    // Processar datas recebidas do frontend (que já vêm em UTC)
+    const processedStartDate = processIncomingDate(startDate);
+    const processedEndDate = processIncomingDate(endDate);
+
     const findExistingBalance = await this.findBalanceByPeriod(
-      startDate,
-      endDate
+      processedStartDate,
+      processedEndDate
     );
     console.log({ findExistingBalance: findExistingBalance.length });
     if (findExistingBalance.length > 0) {
@@ -38,7 +58,13 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     }
     const newBalance = await db
       .insert(balance)
-      .values({ id, amount, startDate, endDate, userId })
+      .values({
+        id,
+        amount,
+        startDate: processedStartDate,
+        endDate: processedEndDate,
+        userId,
+      })
       .returning();
     return newBalance[0];
   }
@@ -144,6 +170,11 @@ export class DrizzleBalanceRepository implements BalanceRepository {
 
     if (!balance) return [];
 
+    // Processar datas recebidas do frontend
+    const processedStartDate = processIncomingDate(startDate);
+    const processedEndDate = processIncomingDate(endDate);
+    const userTimezone = getUserTimezone();
+
     // Para cada saldo, buscar suas transações e calcular os dias
     const results: DailyBalanceRow[] = [];
 
@@ -152,8 +183,16 @@ export class DrizzleBalanceRepository implements BalanceRepository {
       db.select().from(income).where(eq(income.balanceId, balanceId)),
     ]);
 
-    const start = startOfDay(new Date(balance.startDate as unknown as Date));
-    const end = startOfDay(new Date(balance.endDate as unknown as Date));
+    // Processar datas do saldo para o timezone local
+    const balanceStartDate = processIncomingDate(
+      balance.startDate as unknown as Date
+    );
+    const balanceEndDate = processIncomingDate(
+      balance.endDate as unknown as Date
+    );
+
+    const start = startOfDayInTimezone(balanceStartDate, userTimezone);
+    const end = startOfDayInTimezone(balanceEndDate, userTimezone);
     const totalDaysInclusive = Math.max(1, differenceInDays(end, start) + 1);
 
     const baseDailyBalance = Number(balance.amount) / totalDaysInclusive;
@@ -162,7 +201,7 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     const allDates: Date[] = [];
     let currentDate = start;
     let currentEndDate = end;
-    const today = startOfDay(new Date());
+    const today = startOfDayInTimezone(new Date(), userTimezone);
     console.log({ currentDate, currentEndDate });
     while (!isSameDay(currentDate, addDays(currentEndDate, 1))) {
       allDates.push(currentDate);
@@ -172,10 +211,10 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     let accumulatedBalance = 0;
     for (const date of allDates) {
       const dayExpenses = expensesRows.filter((e) =>
-        isSameDay(e.date as unknown as Date, date)
+        isSameDayInTimezone(e.date as unknown as Date, date, userTimezone)
       );
       const dayIncomes = incomesRows.filter((i) =>
-        isSameDay(i.date as unknown as Date, date)
+        isSameDayInTimezone(i.date as unknown as Date, date, userTimezone)
       );
 
       const totalExpensesAmount = dayExpenses.reduce(
@@ -192,21 +231,21 @@ export class DrizzleBalanceRepository implements BalanceRepository {
 
       results.push({
         balanceId: balance.id,
-        date,
+        date: processOutgoingDate(date), // Converter para UTC antes de retornar
         baseBalance: baseDailyBalance,
         previousDayLeftover: accumulatedBalance,
         expenses: dayExpenses.map((e) => ({
           id: e.id,
           amount: Number(e.amount),
           description: e.description,
-          date: e.date,
+          date: processOutgoingDate(e.date as unknown as Date), // Converter para UTC
           balanceId: e.balanceId,
         })),
         incomes: dayIncomes.map((i) => ({
           id: i.id,
           amount: Number(i.amount),
           description: i.description,
-          date: i.date,
+          date: processOutgoingDate(i.date as unknown as Date), // Converter para UTC
           balanceId: i.balanceId,
         })),
         totalAvailable,
@@ -215,9 +254,14 @@ export class DrizzleBalanceRepository implements BalanceRepository {
 
       accumulatedBalance = remaining;
     }
-    console.log({ results });
-    const filteredResults = results.filter((result) =>
-      isWithinInterval(result.date, { start: startDate, end: endDate })
+    const filteredResults = results.filter(
+      (result) =>
+        isWithinInterval(result.date, {
+          start: processedStartDate,
+          end: processedEndDate,
+        }) ||
+        isSameDay(result.date, processedStartDate) ||
+        isSameDay(result.date, processedEndDate)
     );
 
     return filteredResults;

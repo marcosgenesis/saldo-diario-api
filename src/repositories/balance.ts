@@ -49,4 +49,5 @@ export interface BalanceRepository {
     endDate: Date,
     balanceId: string
   ): Promise<DailyBalanceRow[]>;
+  getTodayBalance(userId: string): Promise<SelectBalance>;
 }

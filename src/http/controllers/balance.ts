@@ -1,8 +1,8 @@
-import { and, eq, gte, lte } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { db } from "../../db/client";
-import { balance, expense, income } from "../../db/schema";
+import { balance } from "../../db/schema";
 import { NotFoundError, UnauthorizedError } from "../../errors/app-error";
 import { DrizzleBalanceRepository } from "../../repositories/drizzle/drizzle-balance-repository";
 import { CreateBalanceUseCase } from "../../use-cases/balance/create-balance";
@@ -14,6 +14,7 @@ import {
   getDailyBalanceByPeriodSchema,
   GetDailyBalanceByPeriodUseCase,
 } from "../../use-cases/balance/get-daily-balance-by-period";
+import { GetTodayBalanceUseCase } from "../../use-cases/balance/get-today-balance";
 import { ApiResponseBuilder } from "../../utils/api-response";
 import { asyncErrorHandler } from "../middleware/error-handler";
 
@@ -73,6 +74,23 @@ export class BalanceController {
         "Saldo criado com sucesso",
         201
       );
+    }
+  );
+
+  static getTodayBalance = asyncErrorHandler(
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      // Usar o usuário autenticado do middleware
+      if (!request.user) {
+        throw new UnauthorizedError("Usuário não está logado");
+      }
+
+      const getTodayBalanceUseCase = new GetTodayBalanceUseCase(
+        new DrizzleBalanceRepository()
+      );
+
+      const response = await getTodayBalanceUseCase.execute(request.user.id);
+
+      return ApiResponseBuilder.success(reply, response);
     }
   );
 
@@ -236,119 +254,6 @@ export class BalanceController {
       }
 
       return reply.status(204).send();
-    }
-  );
-
-  // Criar despesa
-  static createExpense = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{ Body: z.infer<typeof createExpenseSchema> }>,
-      reply: FastifyReply
-    ) => {
-      const { amount, description, date, balanceId } =
-        createExpenseSchema.parse(request.body);
-
-      const newExpense = await db
-        .insert(expense)
-        .values({
-          amount: amount.toString(),
-          description,
-          date: new Date(date),
-          balanceId,
-        })
-        .returning();
-
-      return ApiResponseBuilder.success(
-        reply,
-        newExpense[0],
-        "Despesa criada com sucesso",
-        201
-      );
-    }
-  );
-
-  // Criar receita
-  static createIncome = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{ Body: z.infer<typeof createIncomeSchema> }>,
-      reply: FastifyReply
-    ) => {
-      const { amount, description, date, balanceId } = createIncomeSchema.parse(
-        request.body
-      );
-
-      const newIncome = await db
-        .insert(income)
-        .values({
-          amount: amount.toString(),
-          description,
-          date: new Date(date),
-          balanceId,
-        })
-        .returning();
-
-      return ApiResponseBuilder.success(
-        reply,
-        newIncome[0],
-        "Receita criada com sucesso",
-        201
-      );
-    }
-  );
-
-  // Buscar saldo com despesas e receitas por período
-  static getBalanceWithTransactions = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{
-        Querystring: {
-          startDate?: string;
-          endDate?: string;
-          balanceId?: string;
-        };
-      }>,
-      reply: FastifyReply
-    ) => {
-      const { startDate, endDate, balanceId } = request.query;
-
-      let whereClause = undefined;
-
-      if (balanceId) {
-        whereClause = eq(balance.id, balanceId);
-      } else if (startDate && endDate) {
-        whereClause = and(
-          gte(balance.startDate, new Date(startDate)),
-          lte(balance.endDate, new Date(endDate))
-        );
-      }
-
-      const balances = await db
-        .select()
-        .from(balance)
-        .where(whereClause)
-        .orderBy(balance.startDate);
-
-      // Buscar despesas e receitas para cada saldo
-      const balancesWithTransactions = await Promise.all(
-        balances.map(async (bal) => {
-          const expenses = await db
-            .select()
-            .from(expense)
-            .where(eq(expense.balanceId, bal.id));
-
-          const incomes = await db
-            .select()
-            .from(income)
-            .where(eq(income.balanceId, bal.id));
-
-          return {
-            ...bal,
-            expenses,
-            incomes,
-          };
-        })
-      );
-
-      return ApiResponseBuilder.success(reply, balancesWithTransactions);
     }
   );
 }
