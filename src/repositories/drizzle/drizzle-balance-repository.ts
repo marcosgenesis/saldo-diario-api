@@ -203,6 +203,7 @@ export class DrizzleBalanceRepository implements BalanceRepository {
 
     const baseDailyBalance = Number(balance.amount) / totalDaysInclusive;
 
+    console.log({ start, end, balanceStartDate, balanceEndDate });
     // Construir lista de datas do período
     const allDates: Date[] = [];
     let currentDate = start;
@@ -232,13 +233,13 @@ export class DrizzleBalanceRepository implements BalanceRepository {
         (acc, i) => acc + Number(i.amount),
         0
       );
-      console.log({
-        date,
-        baseDailyBalance,
-        accumulatedBalance,
-        totalIncomesAmount,
-        totalExpensesAmount,
-      });
+      // console.log({
+      //   date,
+      //   baseDailyBalance,
+      //   accumulatedBalance,
+      //   totalIncomesAmount,
+      //   totalExpensesAmount,
+      // });
       const totalAvailable =
         baseDailyBalance + accumulatedBalance + totalIncomesAmount;
       const remaining = totalAvailable - totalExpensesAmount;
