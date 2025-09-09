@@ -232,6 +232,7 @@ export class DrizzleBalanceRepository implements BalanceRepository {
         0
       );
       console.log({
+        date,
         baseDailyBalance,
         accumulatedBalance,
         totalIncomesAmount,
