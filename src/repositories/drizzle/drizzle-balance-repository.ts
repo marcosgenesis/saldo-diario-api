@@ -208,7 +208,7 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     let currentDate = start;
     let currentEndDate = end;
     const today = startOfDayInTimezone(new Date(), userTimezone);
-    console.log({ currentDate, currentEndDate });
+
     while (!isSameDay(currentDate, addDays(currentEndDate, 1))) {
       allDates.push(currentDate);
       currentDate = addDays(currentDate, 1);
@@ -231,6 +231,12 @@ export class DrizzleBalanceRepository implements BalanceRepository {
         (acc, i) => acc + Number(i.amount),
         0
       );
+      console.log({
+        baseDailyBalance,
+        accumulatedBalance,
+        totalIncomesAmount,
+        totalExpensesAmount,
+      });
       const totalAvailable =
         baseDailyBalance + accumulatedBalance + totalIncomesAmount;
       const remaining = totalAvailable - totalExpensesAmount;
