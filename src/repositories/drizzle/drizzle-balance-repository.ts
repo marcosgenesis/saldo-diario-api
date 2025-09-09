@@ -213,6 +213,7 @@ export class DrizzleBalanceRepository implements BalanceRepository {
       allDates.push(currentDate);
       currentDate = addDays(currentDate, 1);
     }
+    console.log({ allDates });
     // Acumular saldo até o dia anterior ao primeiro exibido (aqui usamos todos)
     let accumulatedBalance = 0;
     for (const date of allDates) {
