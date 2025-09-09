@@ -32,7 +32,13 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     const findBalance = await db
       .select()
       .from(balance)
-      .where(and(eq(balance.userId, userId), gte(balance.startDate, today)))
+      .where(
+        and(
+          eq(balance.userId, userId),
+          lte(balance.startDate, today),
+          gte(balance.endDate, today)
+        )
+      )
       .orderBy(balance.startDate);
     return findBalance[0];
   }
