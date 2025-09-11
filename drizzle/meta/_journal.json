@@ -43,6 +43,13 @@
       "when": 1756724308969,
       "tag": "0005_unknown_ser_duncan",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1757627154768,
+      "tag": "0006_premium_human_torch",
+      "breakpoints": true
     }
   ]
 }
