@@ -3,7 +3,6 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer } from "better-auth/plugins";
 import { db } from "./db/client";
 
-console.log(process.env.CLIENT_ORIGIN, process.env.BETTER_AUTH_URL);
 export const auth = betterAuth({
   plugins: [bearer()],
   database: drizzleAdapter(db, {

@@ -60,7 +60,6 @@ export class BalanceController {
         new DrizzleBalanceRepository()
       );
 
-      console.log({ amount, startDate, endDate, userId: request.user.id });
       const response = await createBalanceUseCase.execute({
         amount: amount.toString(),
         startDate: startDate,

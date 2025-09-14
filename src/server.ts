@@ -3,15 +3,19 @@ import "dotenv/config";
 import Fastify from "fastify";
 import { auth } from "./auth"; // Your configured Better Auth instance
 import { errorHandler } from "./http/middleware/error-handler.js";
+import { requestLoggerPlugin } from "./http/middleware/request-logger.js";
 import { registerRoutes } from "./http/routes/index.js";
 
-const fastify = Fastify();
+const fastify = Fastify({
+  logger: {
+    level: process.env.NODE_ENV === "production" ? "info" : "debug",
+  },
+});
 fastify.get("/", (request, reply) => {
   reply.send("Hello World");
 });
 const allowedOrigin =
   process.env.CLIENT_ORIGIN || "https://app.saldodiario.com.br";
-console.log(allowedOrigin);
 fastify.register(fastifyCors, {
   origin: [allowedOrigin],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -82,6 +86,9 @@ fastify.route({
     }
   },
 });
+
+// Registrar middleware de logging de requisições
+await fastify.register(requestLoggerPlugin);
 
 // Registrar middleware de tratamento de erros
 fastify.setErrorHandler(errorHandler);

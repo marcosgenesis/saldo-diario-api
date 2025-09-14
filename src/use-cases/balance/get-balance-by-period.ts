@@ -52,7 +52,6 @@ export class GetBalanceByPeriodUseCase {
             bal.endDate as unknown as Date,
             bal.id
           );
-        console.log({ startDate: bal.startDate, endDate: bal.endDate });
         const todayRow = dailyRows.find((row) =>
           isSameDayInTimezone(row.date as unknown as Date, today, userTimezone)
         );

@@ -7,22 +7,32 @@ import {
   InternalServerError,
 } from "../../errors/app-error";
 import { ApiResponseBuilder } from "../../utils/api-response";
+import {
+  extractRequestData,
+  formatRequestLog,
+  generateCurlCommand,
+} from "../../utils/request-logger.js";
 
 export async function errorHandler(
   error: FastifyError,
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  // Log do erro para debugging
-  request.log.error({
-    error: error.message,
-    stack: error.stack,
-    url: request.url,
-    method: request.method,
-    body: request.body,
-    params: request.params,
-    query: request.query,
-  });
+  // Extrair dados da requisição
+  const requestData = extractRequestData(request);
+
+  // Gerar comando curl para reprodução
+  const curlCommand = generateCurlCommand(request, process.env.API_BASE_URL);
+
+  // Formatar log estruturado
+  const logData = formatRequestLog(requestData, error, curlCommand);
+
+  // Log detalhado do erro para debugging e reprodução
+  request.log.error(logData, `Request failed: ${error.message}`);
+
+  // Console log adicional para debug
+  console.log("[ERROR-HANDLER] Error occurred:", error.message);
+  console.log("[ERROR-HANDLER] Curl command:", curlCommand);
 
   // Tratar erros de validação do Zod
   if (error instanceof ZodError) {
@@ -106,6 +116,11 @@ export function asyncErrorHandler<T extends FastifyRequest = FastifyRequest>(
     try {
       return await handler(request, reply);
     } catch (error) {
+      // Adicionar contexto adicional se o erro não for um FastifyError
+      if (!(error instanceof Error)) {
+        const errorObj = new Error(`Async handler failed: ${String(error)}`);
+        return errorHandler(errorObj as FastifyError, request, reply);
+      }
       return errorHandler(error as FastifyError, request, reply);
     }
   };
