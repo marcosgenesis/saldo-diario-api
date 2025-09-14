@@ -5,6 +5,7 @@ import {
   CreateIncomeUseCase,
   CreateIncomesBulkUseCase,
 } from "../../use-cases/income/create-income";
+import { DeleteIncomeUseCase } from "../../use-cases/income/delete-income";
 import { ApiResponseBuilder } from "../../utils";
 import { asyncErrorHandler } from "../middleware/error-handler";
 
@@ -69,6 +70,28 @@ export class IncomeController {
         created,
         "Receitas criadas com sucesso",
         201
+      );
+    }
+  );
+
+  static deleteIncome = asyncErrorHandler(
+    async (
+      request: FastifyRequest<{ Params: { id: string } }>,
+      reply: FastifyReply
+    ) => {
+      const { id } = request.params;
+
+      const deleteIncomeUseCase = new DeleteIncomeUseCase(
+        new DrizzleIncomeRepository()
+      );
+
+      await deleteIncomeUseCase.execute(id);
+
+      return ApiResponseBuilder.success(
+        reply,
+        null,
+        "Receita excluída com sucesso",
+        200
       );
     }
   );

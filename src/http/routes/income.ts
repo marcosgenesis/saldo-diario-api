@@ -6,4 +6,5 @@ export async function incomeRoutes(fastify: FastifyInstance) {
   fastify.addHook("preHandler", authMiddleware);
   fastify.post("/api/income", IncomeController.createIncome);
   fastify.post("/api/incomes/bulk", IncomeController.createIncomesBulk);
+  fastify.delete("/api/income/:id", IncomeController.deleteIncome);
 }

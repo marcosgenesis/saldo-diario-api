@@ -5,6 +5,7 @@ import {
   CreateExpenseUseCase,
   CreateExpensesBulkUseCase,
 } from "../../use-cases/expense/create-expense";
+import { DeleteExpenseUseCase } from "../../use-cases/expense/delete-expense";
 import { ApiResponseBuilder } from "../../utils";
 import { asyncErrorHandler } from "../middleware/error-handler";
 
@@ -69,6 +70,28 @@ export class ExpenseController {
         created,
         "Despesas criadas com sucesso",
         201
+      );
+    }
+  );
+
+  static deleteExpense = asyncErrorHandler(
+    async (
+      request: FastifyRequest<{ Params: { id: string } }>,
+      reply: FastifyReply
+    ) => {
+      const { id } = request.params;
+
+      const deleteExpenseUseCase = new DeleteExpenseUseCase(
+        new DrizzleExpenseRepository()
+      );
+
+      await deleteExpenseUseCase.execute(id);
+
+      return ApiResponseBuilder.success(
+        reply,
+        null,
+        "Despesa excluída com sucesso",
+        200
       );
     }
   );

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { income } from "../../db/schema";
 import {
@@ -51,7 +52,7 @@ export class DrizzleIncomeRepository implements IncomeRepository {
     throw new Error("Method not implemented.");
   }
 
-  deleteIncome(_id: string): Promise<void> {
-    throw new Error("Method not implemented.");
+  async deleteIncome(id: string): Promise<void> {
+    await db.delete(income).where(eq(income.id, id));
   }
 }
