@@ -49,10 +49,11 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     startDate,
     endDate,
     userId,
-  }: CreateBalanceSchema): Promise<SelectBalance> {
-    // Processar datas recebidas do frontend (que já vêm em UTC)
-    const processedStartDate = processIncomingDate(startDate);
-    const processedEndDate = processIncomingDate(endDate);
+  }: CreateBalanceSchema, userTimezone?: string): Promise<SelectBalance> {
+    // Processar datas recebidas do frontend (convertem qualquer formato para UTC, depois para timezone local)
+    const timezone = userTimezone || getUserTimezone();
+    const processedStartDate = processIncomingDate(startDate, timezone);
+    const processedEndDate = processIncomingDate(endDate, timezone);
 
     const findExistingBalance = await this.findBalanceByPeriod(
       processedStartDate,
@@ -168,17 +169,18 @@ export class DrizzleBalanceRepository implements BalanceRepository {
   async getDailyBalancesByPeriod(
     startDate: Date,
     endDate: Date,
-    balanceId: string
+    balanceId: string,
+    userTimezone?: string
   ): Promise<DailyBalanceRow[]> {
     // Buscar saldos no período
     const balance = await this.getBalanceById(balanceId);
 
     if (!balance) return [];
 
-    // Processar datas recebidas do frontend
-    const processedStartDate = processIncomingDate(startDate);
-    const processedEndDate = processIncomingDate(endDate);
-    const userTimezone = getUserTimezone();
+    // Processar datas recebidas do frontend (convertem qualquer formato para UTC, depois para timezone local)
+    const timezone = userTimezone || getUserTimezone();
+    const processedStartDate = processIncomingDate(startDate, timezone);
+    const processedEndDate = processIncomingDate(endDate, timezone);
 
     // Para cada saldo, buscar suas transações e calcular os dias
     const results: DailyBalanceRow[] = [];
@@ -190,14 +192,16 @@ export class DrizzleBalanceRepository implements BalanceRepository {
 
     // Processar datas do saldo para o timezone local
     const balanceStartDate = processIncomingDate(
-      balance.startDate as unknown as Date
+      balance.startDate as unknown as Date,
+      timezone
     );
     const balanceEndDate = processIncomingDate(
-      balance.endDate as unknown as Date
+      balance.endDate as unknown as Date,
+      timezone
     );
 
-    const start = startOfDayInTimezone(balanceStartDate, userTimezone);
-    const end = startOfDayInTimezone(balanceEndDate, userTimezone);
+    const start = startOfDayInTimezone(balanceStartDate, timezone);
+    const end = startOfDayInTimezone(balanceEndDate, timezone);
     const totalDaysInclusive = Math.max(1, differenceInDays(end, start) + 1);
 
     const baseDailyBalance = Number(balance.amount) / totalDaysInclusive;
@@ -206,7 +210,7 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     const allDates: Date[] = [];
     let currentDate = start;
     let currentEndDate = end;
-    const today = startOfDayInTimezone(new Date(), userTimezone);
+    const today = startOfDayInTimezone(new Date(), timezone);
 
     while (!isSameDay(currentDate, addDays(currentEndDate, 1))) {
       allDates.push(currentDate);
@@ -216,10 +220,10 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     let accumulatedBalance = 0;
     for (const date of allDates) {
       const dayExpenses = expensesRows.filter((e) =>
-        isSameDayInTimezone(e.date as unknown as Date, date, userTimezone)
+        isSameDayInTimezone(e.date as unknown as Date, date, timezone)
       );
       const dayIncomes = incomesRows.filter((i) =>
-        isSameDayInTimezone(i.date as unknown as Date, date, userTimezone)
+        isSameDayInTimezone(i.date as unknown as Date, date, timezone)
       );
 
       const totalExpensesAmount = dayExpenses.reduce(
@@ -236,21 +240,21 @@ export class DrizzleBalanceRepository implements BalanceRepository {
 
       results.push({
         balanceId: balance.id,
-        date: processOutgoingDate(date), // Converter para UTC antes de retornar
+        date: processOutgoingDate(date, timezone), // Converter para UTC antes de retornar
         baseBalance: baseDailyBalance,
         previousDayLeftover: accumulatedBalance,
         expenses: dayExpenses.map((e) => ({
           id: e.id,
           amount: Number(e.amount),
           description: e.description,
-          date: processOutgoingDate(e.date as unknown as Date), // Converter para UTC
+          date: processOutgoingDate(e.date as unknown as Date, timezone), // Converter para UTC
           balanceId: e.balanceId,
         })),
         incomes: dayIncomes.map((i) => ({
           id: i.id,
           amount: Number(i.amount),
           description: i.description,
-          date: processOutgoingDate(i.date as unknown as Date), // Converter para UTC
+          date: processOutgoingDate(i.date as unknown as Date, timezone), // Converter para UTC
           balanceId: i.balanceId,
         })),
         totalAvailable,

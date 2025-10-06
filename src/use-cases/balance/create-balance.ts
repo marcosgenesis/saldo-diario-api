@@ -8,7 +8,7 @@ import {
 export class CreateBalanceUseCase {
   constructor(private readonly balanceRepository: BalanceRepository) {}
 
-  async execute(balance: CreateBalanceSchema): Promise<SelectBalance> {
+  async execute(balance: CreateBalanceSchema, userTimezone?: string): Promise<SelectBalance> {
     // Validações básicas
     if (balance.startDate >= balance.endDate) {
       throw new ValidationError(
@@ -20,6 +20,6 @@ export class CreateBalanceUseCase {
       throw new ValidationError("O valor deve ser maior que zero");
     }
 
-    return this.balanceRepository.createBalance(balance);
+    return this.balanceRepository.createBalance(balance, userTimezone);
   }
 }

@@ -13,12 +13,14 @@ export class GetDailyBalanceByPeriodUseCase {
   async execute(
     startDate: Date,
     endDate: Date,
-    balanceId: string
+    balanceId: string,
+    userTimezone?: string
   ): Promise<DailyBalanceRow[]> {
     return this.balanceRepository.getDailyBalancesByPeriod(
       startDate,
       endDate,
-      balanceId
+      balanceId,
+      userTimezone
     );
   }
 }

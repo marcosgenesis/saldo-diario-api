@@ -60,12 +60,15 @@ export class BalanceController {
         new DrizzleBalanceRepository()
       );
 
+      // Extrair timezone do header se disponível
+      const userTimezone = request.headers['x-timezone'] as string;
+
       const response = await createBalanceUseCase.execute({
         amount: amount.toString(),
         startDate: startDate,
         endDate: endDate,
         userId: request.user.id,
-      });
+      }, userTimezone);
 
       return ApiResponseBuilder.success(
         reply,
@@ -112,9 +115,13 @@ export class BalanceController {
         new DrizzleBalanceRepository()
       );
 
+      // Extrair timezone do header se disponível
+      const userTimezone = request.headers['x-timezone'] as string;
+
       const response = await getBalanceByPeriodUseCase.execute(
         startDate,
-        endDate
+        endDate,
+        userTimezone
       );
       return ApiResponseBuilder.success(
         reply,
@@ -142,10 +149,15 @@ export class BalanceController {
       const getDailyBalanceByPeriodUseCase = new GetDailyBalanceByPeriodUseCase(
         new DrizzleBalanceRepository()
       );
+
+      // Extrair timezone do header se disponível
+      const userTimezone = request.headers['x-timezone'] as string;
+
       const response = await getDailyBalanceByPeriodUseCase.execute(
         startDate,
         endDate,
-        balanceId
+        balanceId,
+        userTimezone
       );
 
       return ApiResponseBuilder.success(

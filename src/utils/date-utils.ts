@@ -104,6 +104,29 @@ export function getUserTimezone(request?: any): string {
 }
 
 /**
+ * Normaliza qualquer entrada de data para UTC
+ * Lida com diferentes formatos: Date, string ISO, string com timezone, etc.
+ */
+export function normalizeToUTC(date: Date | string): Date {
+  if (typeof date === "string") {
+    // Se for string, tenta fazer parse ISO primeiro
+    const parsed = parseISO(date);
+    // Se o parse falhou ou resultou em data inválida, tenta Date constructor
+    if (isNaN(parsed.getTime())) {
+      const fallback = new Date(date);
+      if (isNaN(fallback.getTime())) {
+        throw new Error(`Data inválida: ${date}`);
+      }
+      return fallback;
+    }
+    return parsed;
+  }
+
+  // Se já for Date, retorna como está (assumindo que já está em UTC ou será tratado)
+  return date;
+}
+
+/**
  * Cria uma data "limpa" (sem horário) no timezone local
  * Útil para comparações de data
  */
@@ -135,16 +158,18 @@ export function isSameDayInTimezone(
 }
 
 /**
- * Processa datas recebidas do frontend (que já vêm em UTC)
- * e converte para o timezone correto para processamento
+ * Processa datas recebidas do frontend
+ * Converte qualquer formato de data para UTC primeiro, depois para o timezone do usuário
  */
 export function processIncomingDate(
   date: Date | string,
   timezone: string = DEFAULT_TIMEZONE
 ): Date {
-  // As datas que chegam do frontend já estão em UTC
-  // Precisamos convertê-las para o timezone local para processamento
-  return fromUTC(date, timezone);
+  // 1. Normalizar qualquer entrada para UTC
+  const utcDate = normalizeToUTC(date);
+
+  // 2. Converter de UTC para o timezone do usuário
+  return toZonedTime(utcDate, timezone);
 }
 
 /**

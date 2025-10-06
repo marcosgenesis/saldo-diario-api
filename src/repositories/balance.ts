@@ -36,7 +36,7 @@ export interface DailyBalanceRow {
 }
 
 export interface BalanceRepository {
-  createBalance(balance: CreateBalanceSchema): Promise<SelectBalance>;
+  createBalance(balance: CreateBalanceSchema, userTimezone?: string): Promise<SelectBalance>;
   getBalanceById(id: string): Promise<SelectBalance | null>;
   getUserBalances(userId: string): Promise<SelectBalance[]>;
   updateBalance(
@@ -47,7 +47,8 @@ export interface BalanceRepository {
   getDailyBalancesByPeriod(
     startDate: Date,
     endDate: Date,
-    balanceId: string
+    balanceId: string,
+    userTimezone?: string
   ): Promise<DailyBalanceRow[]>;
   getTodayBalance(userId: string): Promise<SelectBalance>;
 }

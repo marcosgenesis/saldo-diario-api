@@ -23,7 +23,8 @@ export class GetBalanceByPeriodUseCase {
 
   async execute(
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    userTimezone?: string
   ): Promise<
     Array<
       SelectBalance & {
@@ -32,17 +33,17 @@ export class GetBalanceByPeriodUseCase {
       }
     >
   > {
-    // Processar datas recebidas do frontend
-    const processedStartDate = processIncomingDate(startDate);
-    const processedEndDate = processIncomingDate(endDate);
-    const userTimezone = getUserTimezone();
+    // Processar datas recebidas do frontend (convertem qualquer formato para UTC, depois para timezone local)
+    const timezone = userTimezone || getUserTimezone();
+    const processedStartDate = processIncomingDate(startDate, timezone);
+    const processedEndDate = processIncomingDate(endDate, timezone);
 
     const balances = await this.balanceRepository.findBalanceByPeriod(
       processedStartDate,
       processedEndDate
     );
 
-    const today = startOfDayInTimezone(new Date(), userTimezone);
+    const today = startOfDayInTimezone(new Date(), timezone);
 
     const results = await Promise.all(
       balances.map(async (bal) => {
@@ -50,10 +51,11 @@ export class GetBalanceByPeriodUseCase {
           await this.balanceRepository.getDailyBalancesByPeriod(
             bal.startDate as unknown as Date,
             bal.endDate as unknown as Date,
-            bal.id
+            bal.id,
+            timezone
           );
         const todayRow = dailyRows.find((row) =>
-          isSameDayInTimezone(row.date as unknown as Date, today, userTimezone)
+          isSameDayInTimezone(row.date as unknown as Date, today, timezone)
         );
         const dailyBalanceToday = todayRow
           ? Number(todayRow.remainingBalance)
@@ -66,7 +68,7 @@ export class GetBalanceByPeriodUseCase {
               isSameDayInTimezone(
                 row.date as unknown as Date,
                 today,
-                userTimezone
+                timezone
               )
           )
           .flatMap((row) => row.expenses)
@@ -79,7 +81,7 @@ export class GetBalanceByPeriodUseCase {
               isSameDayInTimezone(
                 row.date as unknown as Date,
                 today,
-                userTimezone
+                timezone
               )
           )
           .flatMap((row) => row.incomes)
@@ -90,8 +92,8 @@ export class GetBalanceByPeriodUseCase {
 
         return {
           ...bal,
-          startDate: processOutgoingDate(bal.startDate as unknown as Date), // Converter para UTC
-          endDate: processOutgoingDate(bal.endDate as unknown as Date), // Converter para UTC
+          startDate: processOutgoingDate(bal.startDate as unknown as Date, timezone), // Converter para UTC
+          endDate: processOutgoingDate(bal.endDate as unknown as Date, timezone), // Converter para UTC
           dailyBalanceToday,
           totalRemainingUntilToday,
         };
