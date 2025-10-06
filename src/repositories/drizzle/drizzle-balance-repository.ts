@@ -43,13 +43,10 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     return findBalance[0];
   }
 
-  async createBalance({
-    id,
-    amount,
-    startDate,
-    endDate,
-    userId,
-  }: CreateBalanceSchema, userTimezone?: string): Promise<SelectBalance> {
+  async createBalance(
+    { id, amount, startDate, endDate, userId }: CreateBalanceSchema,
+    userTimezone?: string
+  ): Promise<SelectBalance> {
     // Processar datas recebidas do frontend (convertem qualquer formato para UTC, depois para timezone local)
     const timezone = userTimezone || getUserTimezone();
     const processedStartDate = processIncomingDate(startDate, timezone);

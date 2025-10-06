@@ -8,7 +8,10 @@ import {
 export class CreateBalanceUseCase {
   constructor(private readonly balanceRepository: BalanceRepository) {}
 
-  async execute(balance: CreateBalanceSchema, userTimezone?: string): Promise<SelectBalance> {
+  async execute(
+    balance: CreateBalanceSchema,
+    userTimezone?: string
+  ): Promise<SelectBalance> {
     // Validações básicas
     if (balance.startDate >= balance.endDate) {
       throw new ValidationError(

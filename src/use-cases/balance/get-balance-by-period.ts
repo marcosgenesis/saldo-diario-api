@@ -65,11 +65,7 @@ export class GetBalanceByPeriodUseCase {
           .filter(
             (row) =>
               isBefore(row.date as unknown as Date, today) ||
-              isSameDayInTimezone(
-                row.date as unknown as Date,
-                today,
-                timezone
-              )
+              isSameDayInTimezone(row.date as unknown as Date, today, timezone)
           )
           .flatMap((row) => row.expenses)
           .reduce((acc, e) => acc + Number(e.amount), 0);
@@ -78,11 +74,7 @@ export class GetBalanceByPeriodUseCase {
           .filter(
             (row) =>
               isBefore(row.date as unknown as Date, today) ||
-              isSameDayInTimezone(
-                row.date as unknown as Date,
-                today,
-                timezone
-              )
+              isSameDayInTimezone(row.date as unknown as Date, today, timezone)
           )
           .flatMap((row) => row.incomes)
           .reduce((acc, i) => acc + Number(i.amount), 0);
@@ -92,8 +84,14 @@ export class GetBalanceByPeriodUseCase {
 
         return {
           ...bal,
-          startDate: processOutgoingDate(bal.startDate as unknown as Date, timezone), // Converter para UTC
-          endDate: processOutgoingDate(bal.endDate as unknown as Date, timezone), // Converter para UTC
+          startDate: processOutgoingDate(
+            bal.startDate as unknown as Date,
+            timezone
+          ), // Converter para UTC
+          endDate: processOutgoingDate(
+            bal.endDate as unknown as Date,
+            timezone
+          ), // Converter para UTC
           dailyBalanceToday,
           totalRemainingUntilToday,
         };

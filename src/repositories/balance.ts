@@ -36,7 +36,10 @@ export interface DailyBalanceRow {
 }
 
 export interface BalanceRepository {
-  createBalance(balance: CreateBalanceSchema, userTimezone?: string): Promise<SelectBalance>;
+  createBalance(
+    balance: CreateBalanceSchema,
+    userTimezone?: string
+  ): Promise<SelectBalance>;
   getBalanceById(id: string): Promise<SelectBalance | null>;
   getUserBalances(userId: string): Promise<SelectBalance[]>;
   updateBalance(
