@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { eq, sum } from "drizzle-orm";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { db } from "../../db/client";
-import { balance } from "../../db/schema";
+import { balance, expense, income } from "../../db/schema";
 import { NotFoundError, UnauthorizedError } from "../../errors/app-error";
 import { DrizzleBalanceRepository } from "../../repositories/drizzle/drizzle-balance-repository";
 import { CreateBalanceUseCase } from "../../use-cases/balance/create-balance";
@@ -208,7 +208,29 @@ export class BalanceController {
         .where(eq(balance.userId, request.user.id))
         .orderBy(balance.startDate);
 
-      return ApiResponseBuilder.success(reply, balances);
+      // Para cada balance, buscar a soma dos valores de incomes e expenses
+      const balancesWithSums = await Promise.all(
+        balances.map(async (balanceItem) => {
+          const [incomeSum, expenseSum] = await Promise.all([
+            db
+              .select({ total: sum(income.amount) })
+              .from(income)
+              .where(eq(income.balanceId, balanceItem.id)),
+            db
+              .select({ total: sum(expense.amount) })
+              .from(expense)
+              .where(eq(expense.balanceId, balanceItem.id)),
+          ]);
+
+          return {
+            ...balanceItem,
+            totalIncomes: Number(incomeSum[0]?.total) || 0,
+            totalExpenses: Number(expenseSum[0]?.total) || 0,
+          };
+        })
+      );
+
+      return ApiResponseBuilder.success(reply, balancesWithSums);
     }
   );
 
