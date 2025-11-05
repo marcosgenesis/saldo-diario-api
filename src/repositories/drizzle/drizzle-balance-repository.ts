@@ -28,16 +28,19 @@ import {
 } from "../balance";
 
 export class DrizzleBalanceRepository implements BalanceRepository {
-  async getTodayBalance(userId: string): Promise<SelectBalance> {
-    const today = startOfDayInTimezone(new Date(), getUserTimezone());
+  async getBalanceByDate(userId: string, targetDate?: Date, userTimezone?: string): Promise<SelectBalance> {
+    const timezone = userTimezone || getUserTimezone();
+    const target = targetDate 
+      ? startOfDayInTimezone(targetDate, timezone)
+      : startOfDayInTimezone(new Date(), timezone);
     const findBalance = await db
       .select()
       .from(balance)
       .where(
         and(
           eq(balance.userId, userId),
-          lte(balance.startDate, today),
-          gte(balance.endDate, today)
+          lte(balance.startDate, target),
+          gte(balance.endDate, target)
         )
       )
       .orderBy(balance.startDate);

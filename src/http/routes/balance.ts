@@ -7,7 +7,7 @@ export async function balanceRoutes(fastify: FastifyInstance) {
 
   // Rotas de saldo
   fastify.post("/api/balance", BalanceController.createBalance);
-  fastify.get("/api/balance/today", BalanceController.getTodayBalance);
+  fastify.get("/api/balance", BalanceController.getBalanceByDate);
   fastify.get("/api/balance/find/period", BalanceController.getBalanceByPeriod);
   fastify.get("/api/balances", BalanceController.getUserBalances);
   fastify.get("/api/balances/:id", BalanceController.getBalanceById);

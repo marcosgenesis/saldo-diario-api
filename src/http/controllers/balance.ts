@@ -14,7 +14,7 @@ import {
   getDailyBalanceByPeriodSchema,
   GetDailyBalanceByPeriodUseCase,
 } from "../../use-cases/balance/get-daily-balance-by-period";
-import { GetTodayBalanceUseCase } from "../../use-cases/balance/get-today-balance";
+import { GetBalanceByDateUseCase } from "../../use-cases/balance/get-balance-by-date";
 import { ApiResponseBuilder } from "../../utils/api-response";
 import { asyncErrorHandler } from "../middleware/error-handler";
 
@@ -39,6 +39,10 @@ const createIncomeSchema = z.object({
 });
 
 const updateBalanceSchema = z.object();
+
+const getBalanceByDateSchema = z.object({
+  date: z.coerce.date().optional(),
+});
 
 export class BalanceController {
   // Criar novo saldo
@@ -82,21 +86,32 @@ export class BalanceController {
     }
   );
 
-  static getTodayBalance = asyncErrorHandler(
-    async (request: FastifyRequest, reply: FastifyReply) => {
+  static getBalanceByDate = asyncErrorHandler(
+    async (
+      request: FastifyRequest<{
+        Querystring: z.infer<typeof getBalanceByDateSchema>;
+      }>,
+      reply: FastifyReply
+    ) => {
       // Usar o usuário autenticado do middleware
       if (!request.user) {
         throw new UnauthorizedError("Usuário não está logado");
       }
 
-      const getTodayBalanceUseCase = new GetTodayBalanceUseCase(
+      const { date } = getBalanceByDateSchema.parse(request.query);
+
+      const getBalanceByDateUseCase = new GetBalanceByDateUseCase(
         new DrizzleBalanceRepository()
       );
 
       // Extrair timezone do header se disponível
       const userTimezone = request.headers["x-timezone"] as string;
 
-      const response = await getTodayBalanceUseCase.execute(request.user.id, userTimezone);
+      const response = await getBalanceByDateUseCase.execute(
+        request.user.id,
+        userTimezone,
+        date
+      );
 
       return ApiResponseBuilder.success(reply, response);
     }

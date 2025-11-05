@@ -53,5 +53,5 @@ export interface BalanceRepository {
     balanceId: string,
     userTimezone?: string
   ): Promise<DailyBalanceRow[]>;
-  getTodayBalance(userId: string): Promise<SelectBalance>;
+  getBalanceByDate(userId: string, targetDate?: Date, userTimezone?: string): Promise<SelectBalance>;
 }
