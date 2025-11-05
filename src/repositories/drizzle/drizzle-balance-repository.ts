@@ -18,6 +18,7 @@ import {
   processIncomingDate,
   processOutgoingDate,
   startOfDayInTimezone,
+  toUTC,
 } from "../../utils/date-utils";
 import {
   BalanceRepository,
@@ -174,7 +175,7 @@ export class DrizzleBalanceRepository implements BalanceRepository {
 
     if (!balance) return [];
 
-    // Processar datas recebidas do frontend (convertem qualquer formato para UTC, depois para timezone local)
+    // Processar datas recebidas do frontend (strings ISO já em UTC)
     const timezone = userTimezone || getUserTimezone();
     const processedStartDate = processIncomingDate(startDate, timezone);
     const processedEndDate = processIncomingDate(endDate, timezone);
@@ -187,12 +188,12 @@ export class DrizzleBalanceRepository implements BalanceRepository {
       db.select().from(income).where(eq(income.balanceId, balanceId)),
     ]);
 
-    // Processar datas do saldo para o timezone local
-    const balanceStartDate = processIncomingDate(
+    // Converter datas do saldo de UTC (banco) para o timezone do usuário
+    const balanceStartDate = processOutgoingDate(
       balance.startDate as unknown as Date,
       timezone
     );
-    const balanceEndDate = processIncomingDate(
+    const balanceEndDate = processOutgoingDate(
       balance.endDate as unknown as Date,
       timezone
     );
@@ -216,11 +217,20 @@ export class DrizzleBalanceRepository implements BalanceRepository {
     // Acumular saldo até o dia anterior ao primeiro exibido (aqui usamos todos)
     let accumulatedBalance = 0;
     for (const date of allDates) {
+      // Converter datas do banco (UTC) para timezone do usuário para comparação
       const dayExpenses = expensesRows.filter((e) =>
-        isSameDayInTimezone(e.date as unknown as Date, date, timezone)
+        isSameDayInTimezone(
+          processOutgoingDate(e.date as unknown as Date, timezone),
+          date,
+          timezone
+        )
       );
       const dayIncomes = incomesRows.filter((i) =>
-        isSameDayInTimezone(i.date as unknown as Date, date, timezone)
+        isSameDayInTimezone(
+          processOutgoingDate(i.date as unknown as Date, timezone),
+          date,
+          timezone
+        )
       );
 
       const totalExpensesAmount = dayExpenses.reduce(
@@ -237,21 +247,23 @@ export class DrizzleBalanceRepository implements BalanceRepository {
 
       results.push({
         balanceId: balance.id,
-        date: processOutgoingDate(date, timezone), // Converter para UTC antes de retornar
+        date: toUTC(date, timezone), // Converter de timezone do usuário para UTC antes de retornar
         baseBalance: baseDailyBalance,
         previousDayLeftover: accumulatedBalance,
         expenses: dayExpenses.map((e) => ({
           id: e.id,
           amount: Number(e.amount),
           description: e.description,
-          date: processOutgoingDate(e.date as unknown as Date, timezone), // Converter para UTC
+          // Manter em UTC (já vem do banco em UTC)
+          date: e.date as unknown as Date,
           balanceId: e.balanceId,
         })),
         incomes: dayIncomes.map((i) => ({
           id: i.id,
           amount: Number(i.amount),
           description: i.description,
-          date: processOutgoingDate(i.date as unknown as Date, timezone), // Converter para UTC
+          // Manter em UTC (já vem do banco em UTC)
+          date: i.date as unknown as Date,
           balanceId: i.balanceId,
         })),
         totalAvailable,
