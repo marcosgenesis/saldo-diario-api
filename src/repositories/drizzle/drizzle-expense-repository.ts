@@ -6,6 +6,7 @@ import {
   ExpenseRepository,
   ListExpensesSchema,
 } from "../expense";
+import { getUserTimezone, processIncomingDate } from "../../utils/date-utils";
 
 export class DrizzleExpenseRepository implements ExpenseRepository {
   async createExpense({
@@ -13,27 +14,34 @@ export class DrizzleExpenseRepository implements ExpenseRepository {
     description,
     date,
     balanceId,
-  }: CreateExpenseSchema): Promise<ListExpensesSchema> {
+  }: CreateExpenseSchema, userTimezone?: string): Promise<ListExpensesSchema> {
+    const timezone = userTimezone || getUserTimezone();
+    // Converter data do timezone do usuário para UTC antes de salvar
+    const utcDate = processIncomingDate(date, timezone);
+    
     const result = await db
       .insert(expense)
       .values({
         amount,
         description,
         balanceId,
-        date: new Date(date),
+        date: utcDate,
       })
       .returning();
     return result[0];
   }
   async createExpensesBulk(
-    expensesToCreate: CreateExpenseSchema[]
+    expensesToCreate: CreateExpenseSchema[],
+    userTimezone?: string
   ): Promise<ListExpensesSchema[]> {
     if (expensesToCreate.length === 0) return [];
+    const timezone = userTimezone || getUserTimezone();
     const normalized = expensesToCreate.map((e) => ({
       amount: e.amount,
       description: e.description,
       balanceId: e.balanceId,
-      date: new Date(e.date as unknown as string | number | Date),
+      // Converter data do timezone do usuário para UTC antes de salvar
+      date: processIncomingDate(e.date as unknown as string | number | Date, timezone),
     }));
     const result = await db.insert(expense).values(normalized).returning();
     return result;

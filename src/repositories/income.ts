@@ -9,9 +9,10 @@ const listIncomesSchema = createSelectSchema(income);
 export type ListIncomesSchema = z.infer<typeof listIncomesSchema>;
 
 export interface IncomeRepository {
-  createIncome(income: CreateIncomeSchema): Promise<ListIncomesSchema>;
+  createIncome(income: CreateIncomeSchema, userTimezone?: string): Promise<ListIncomesSchema>;
   createIncomesBulk(
-    incomes: CreateIncomeSchema[]
+    incomes: CreateIncomeSchema[],
+    userTimezone?: string
   ): Promise<ListIncomesSchema[]>;
   getIncomesByBalanceId(balanceId: string): Promise<ListIncomesSchema[]>;
   getIncomeById(id: string): Promise<ListIncomesSchema>;

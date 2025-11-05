@@ -28,12 +28,15 @@ export class ExpenseController {
         new DrizzleExpenseRepository()
       );
 
+      // Extrair timezone do header se disponível
+      const userTimezone = request.headers["x-timezone"] as string;
+
       const expense = await createExpenseUseCase.execute({
         amount: amount.toString(),
         description,
         date,
         balanceId,
-      });
+      }, userTimezone);
       return ApiResponseBuilder.success(
         reply,
         expense,
@@ -56,13 +59,17 @@ export class ExpenseController {
         new DrizzleExpenseRepository()
       );
 
+      // Extrair timezone do header se disponível
+      const userTimezone = request.headers["x-timezone"] as string;
+
       const created = await useCase.execute(
         expenses.map((e) => ({
           amount: e.amount.toString(),
           description: e.description,
           date: e.date,
           balanceId: e.balanceId,
-        }))
+        })),
+        userTimezone
       );
 
       return ApiResponseBuilder.success(

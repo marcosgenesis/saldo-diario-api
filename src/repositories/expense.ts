@@ -9,9 +9,10 @@ const listExpensesSchema = createSelectSchema(expense);
 export type ListExpensesSchema = z.infer<typeof listExpensesSchema>;
 
 export interface ExpenseRepository {
-  createExpense(expense: CreateExpenseSchema): Promise<ListExpensesSchema>;
+  createExpense(expense: CreateExpenseSchema, userTimezone?: string): Promise<ListExpensesSchema>;
   createExpensesBulk(
-    expenses: CreateExpenseSchema[]
+    expenses: CreateExpenseSchema[],
+    userTimezone?: string
   ): Promise<ListExpensesSchema[]>;
   getExpensesByBalanceId(balanceId: string): Promise<ListExpensesSchema[]>;
   getExpenseById(id: string): Promise<ListExpensesSchema>;

@@ -11,6 +11,12 @@ export const auth = betterAuth({
   }),
   trustedOrigins: [
     process.env.CLIENT_ORIGIN || "https://app.saldodiario.com.br",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
     "saldodiario://",
   ],
   emailAndPassword: {
@@ -20,8 +26,8 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   advanced: {
     defaultCookieAttributes: {
-      sameSite: "none",
-      secure: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
     },
   },

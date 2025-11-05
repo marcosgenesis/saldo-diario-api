@@ -7,15 +7,15 @@ import {
 export class CreateIncomeUseCase {
   constructor(private incomeRepository: IncomeRepository) {}
 
-  async execute(income: CreateIncomeSchema): Promise<ListIncomesSchema> {
-    return this.incomeRepository.createIncome(income);
+  async execute(income: CreateIncomeSchema, userTimezone?: string): Promise<ListIncomesSchema> {
+    return this.incomeRepository.createIncome(income, userTimezone);
   }
 }
 
 export class CreateIncomesBulkUseCase {
   constructor(private incomeRepository: IncomeRepository) {}
 
-  async execute(incomes: CreateIncomeSchema[]): Promise<ListIncomesSchema[]> {
-    return this.incomeRepository.createIncomesBulk(incomes);
+  async execute(incomes: CreateIncomeSchema[], userTimezone?: string): Promise<ListIncomesSchema[]> {
+    return this.incomeRepository.createIncomesBulk(incomes, userTimezone);
   }
 }

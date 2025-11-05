@@ -6,6 +6,7 @@ import {
   IncomeRepository,
   ListIncomesSchema,
 } from "../income";
+import { getUserTimezone, processIncomingDate } from "../../utils/date-utils";
 
 export class DrizzleIncomeRepository implements IncomeRepository {
   async createIncome({
@@ -13,28 +14,35 @@ export class DrizzleIncomeRepository implements IncomeRepository {
     description,
     date,
     balanceId,
-  }: CreateIncomeSchema): Promise<ListIncomesSchema> {
+  }: CreateIncomeSchema, userTimezone?: string): Promise<ListIncomesSchema> {
+    const timezone = userTimezone || getUserTimezone();
+    // Converter data do timezone do usuário para UTC antes de salvar
+    const utcDate = processIncomingDate(date, timezone);
+    
     const result = await db
       .insert(income)
       .values({
         amount,
         description,
         balanceId,
-        date: new Date(date),
+        date: utcDate,
       })
       .returning();
     return result[0];
   }
 
   async createIncomesBulk(
-    incomesToCreate: CreateIncomeSchema[]
+    incomesToCreate: CreateIncomeSchema[],
+    userTimezone?: string
   ): Promise<ListIncomesSchema[]> {
     if (incomesToCreate.length === 0) return [];
+    const timezone = userTimezone || getUserTimezone();
     const normalized = incomesToCreate.map((i) => ({
       amount: i.amount,
       description: i.description,
       balanceId: i.balanceId,
-      date: new Date(i.date as unknown as string | number | Date),
+      // Converter data do timezone do usuário para UTC antes de salvar
+      date: processIncomingDate(i.date as unknown as string | number | Date, timezone),
     }));
     const result = await db.insert(income).values(normalized).returning();
     return result;

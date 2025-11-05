@@ -16,14 +16,39 @@ fastify.get("/", (request, reply) => {
 });
 const allowedOrigin =
   process.env.CLIENT_ORIGIN || "https://app.saldodiario.com.br";
+
+// Lista de origens permitidas (incluindo localhost para desenvolvimento)
+const allowedOrigins = [
+  allowedOrigin,
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+];
+
 fastify.register(fastifyCors, {
-  origin: [allowedOrigin],
+  origin: (origin, cb) => {
+    // Em desenvolvimento, permitir todas as origens locais
+    if (!origin || allowedOrigins.includes(origin)) {
+      cb(null, true);
+      return;
+    }
+    // Em produção, apenas a origem permitida
+    if (allowedOrigins.includes(origin)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Not allowed by CORS"), false);
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
     "Authorization",
     "X-Requested-With",
     "Access-Control-Allow-Origin",
+    "x-timezone",
   ],
   credentials: true,
   maxAge: 86400,
@@ -37,6 +62,21 @@ fastify.route({
     try {
       // Handle preflight OPTIONS request
       if (request.method === "OPTIONS") {
+        const origin = request.headers.origin;
+        const allowedOrigin = origin && allowedOrigins.includes(origin) 
+          ? origin 
+          : allowedOrigins[0];
+        
+        reply.header("Access-Control-Allow-Origin", allowedOrigin);
+        reply.header("Access-Control-Allow-Credentials", "true");
+        reply.header(
+          "Access-Control-Allow-Methods",
+          "GET, POST, PUT, DELETE, OPTIONS"
+        );
+        reply.header(
+          "Access-Control-Allow-Headers",
+          "Content-Type, Authorization, X-Requested-With, x-timezone"
+        );
         reply.status(200).send();
         return;
       }
@@ -65,8 +105,14 @@ fastify.route({
       // Forward response to client
       reply.status(response.status);
 
+      // Determinar origem permitida dinamicamente
+      const origin = request.headers.origin;
+      const responseOrigin = origin && allowedOrigins.includes(origin) 
+        ? origin 
+        : allowedOrigins[0];
+
       response.headers.forEach((value, key) => reply.header(key, value));
-      reply.header("Access-Control-Allow-Origin", allowedOrigin);
+      reply.header("Access-Control-Allow-Origin", responseOrigin);
       reply.header("Access-Control-Allow-Credentials", "true");
       reply.header(
         "Access-Control-Allow-Methods",
@@ -74,7 +120,7 @@ fastify.route({
       );
       reply.header(
         "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, X-Requested-With"
+        "Content-Type, Authorization, X-Requested-With, x-timezone"
       );
       reply.send(response.body ? await response.text() : null);
     } catch (error: any) {

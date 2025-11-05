@@ -15,7 +15,7 @@ import {
 export class GetTodayBalanceUseCase {
   constructor(private readonly balanceRepository: BalanceRepository) {}
 
-  async execute(userId: string): Promise<
+  async execute(userId: string, userTimezone?: string): Promise<
     SelectBalance & {
       dailyBalanceToday: number;
       totalRemainingUntilToday: number;
@@ -31,17 +31,18 @@ export class GetTodayBalanceUseCase {
       throw new NotFoundError("Balance not found for today");
     }
     // Processar datas recebidas do frontend
-    const userTimezone = getUserTimezone();
-    const today = startOfDayInTimezone(new Date(), userTimezone);
+    const timezone = userTimezone || getUserTimezone();
+    const today = startOfDayInTimezone(new Date(), timezone);
 
     const dailyRows: DailyBalanceRow[] =
       await this.balanceRepository.getDailyBalancesByPeriod(
         balance.startDate as unknown as Date,
         balance.endDate as unknown as Date,
-        balance.id
+        balance.id,
+        timezone
       );
     const todayRow = dailyRows.find((row) =>
-      isSameDayInTimezone(row.date as unknown as Date, today, userTimezone)
+      isSameDayInTimezone(row.date as unknown as Date, today, timezone)
     );
     const dailyBalanceToday = todayRow ? Number(todayRow.remainingBalance) : 0;
 
@@ -49,7 +50,7 @@ export class GetTodayBalanceUseCase {
       .filter(
         (row) =>
           isBefore(row.date as unknown as Date, today) ||
-          isSameDayInTimezone(row.date as unknown as Date, today, userTimezone)
+          isSameDayInTimezone(row.date as unknown as Date, today, timezone)
       )
       .flatMap((row) => row.expenses)
       .reduce((acc, e) => acc + Number(e.amount), 0);
@@ -58,7 +59,7 @@ export class GetTodayBalanceUseCase {
       .filter(
         (row) =>
           isBefore(row.date as unknown as Date, today) ||
-          isSameDayInTimezone(row.date as unknown as Date, today, userTimezone)
+          isSameDayInTimezone(row.date as unknown as Date, today, timezone)
       )
       .flatMap((row) => row.incomes)
       .reduce((acc, i) => acc + Number(i.amount), 0);
@@ -68,12 +69,10 @@ export class GetTodayBalanceUseCase {
 
     return {
       ...balance,
-      startDate: processOutgoingDate(balance.startDate as unknown as Date), // Converter para UTC
-      endDate: processOutgoingDate(balance.endDate as unknown as Date), // Converter para UTC
+      startDate: processOutgoingDate(balance.startDate as unknown as Date, timezone), // Converter para timezone do usuário
+      endDate: processOutgoingDate(balance.endDate as unknown as Date, timezone), // Converter para timezone do usuário
       dailyBalanceToday,
       totalRemainingUntilToday,
     };
-
-    return balance;
   }
 }

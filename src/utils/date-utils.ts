@@ -159,26 +159,33 @@ export function isSameDayInTimezone(
 
 /**
  * Processa datas recebidas do frontend
- * Converte qualquer formato de data para UTC primeiro, depois para o timezone do usuário
+ * Se receber string ISO (já em UTC), apenas parseia
+ * Se receber Date (do formulário), assume que está no timezone do usuário e converte para UTC
  */
 export function processIncomingDate(
   date: Date | string,
   timezone: string = DEFAULT_TIMEZONE
 ): Date {
-  // 1. Normalizar qualquer entrada para UTC
-  const utcDate = normalizeToUTC(date);
-
-  // 2. Converter de UTC para o timezone do usuário
-  return toZonedTime(utcDate, timezone);
+  // Se for string ISO, já está em UTC (vinda de toISOStringInTimezone)
+  if (typeof date === "string") {
+    // parseISO já interpreta a string ISO como UTC
+    return parseISO(date);
+  }
+  
+  // Se for Date, assume que está no timezone do usuário e converte para UTC
+  // Isso acontece quando recebemos um Date diretamente de um formulário
+  return fromZonedTime(date, timezone);
 }
 
 /**
- * Processa datas para envio ao frontend (converte para UTC)
+ * Processa datas para envio ao frontend
+ * Converte data de UTC para o timezone do usuário antes de enviar
  */
 export function processOutgoingDate(
-  date: Date,
+  date: Date | string,
   timezone: string = DEFAULT_TIMEZONE
 ): Date {
-  // Converte a data local para UTC antes de enviar ao frontend
-  return toUTC(date, timezone);
+  // Converte a data de UTC para o timezone do usuário antes de enviar ao frontend
+  const dateObj = typeof date === "string" ? parseISO(date) : date;
+  return toZonedTime(dateObj, timezone);
 }

@@ -93,7 +93,10 @@ export class BalanceController {
         new DrizzleBalanceRepository()
       );
 
-      const response = await getTodayBalanceUseCase.execute(request.user.id);
+      // Extrair timezone do header se disponível
+      const userTimezone = request.headers["x-timezone"] as string;
+
+      const response = await getTodayBalanceUseCase.execute(request.user.id, userTimezone);
 
       return ApiResponseBuilder.success(reply, response);
     }
