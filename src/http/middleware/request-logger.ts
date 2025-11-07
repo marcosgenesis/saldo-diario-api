@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { logJson } from "../../utils/logger.js";
 import {
   extractRequestData,
   generateCurlCommand,
@@ -38,10 +39,13 @@ export async function requestLoggerPlugin(fastify: FastifyInstance) {
       const startTime = (request as any).startTime || Date.now();
       const duration = Date.now() - startTime;
 
-      // Debug log para verificar se o hook está sendo executado
-      console.log(
-        `[REQUEST-LOGGER] ${request.method} ${request.url} - Status: ${statusCode}`
-      );
+      // Debug log formatado como JSON
+      logJson("REQUEST-LOGGER", {
+        method: request.method,
+        url: request.url,
+        status: statusCode,
+        duration: `${duration}ms`,
+      });
 
       // Log detalhado apenas para erros (4xx e 5xx)
       if (statusCode >= 400) {

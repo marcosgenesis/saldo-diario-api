@@ -1,5 +1,6 @@
 import { FastifyReply } from "fastify";
 import { AppError } from "../errors/app-error";
+import { logError } from "./logger.js";
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -47,7 +48,7 @@ export class ApiResponseBuilder {
       message = error.message;
     } else {
       // Para erros não tratados, logar para debugging
-      console.error("Erro não tratado:", error);
+      logError("Untreated Error", error);
     }
 
     const response: ApiResponse = {

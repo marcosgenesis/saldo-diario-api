@@ -7,6 +7,7 @@ import {
   InternalServerError,
 } from "../../errors/app-error";
 import { ApiResponseBuilder } from "../../utils/api-response";
+import { logError, logJson } from "../../utils/logger.js";
 import {
   extractRequestData,
   formatRequestLog,
@@ -30,9 +31,9 @@ export async function errorHandler(
   // Log detalhado do erro para debugging e reprodução
   request.log.error(logData, `Request failed: ${error.message}`);
 
-  // Console log adicional para debug
-  console.log("[ERROR-HANDLER] Error occurred:", error.message);
-  console.log("[ERROR-HANDLER] Curl command:", curlCommand);
+  // Console log adicional para debug formatado como JSON
+  logError("ERROR-HANDLER", error);
+  logJson("ERROR-HANDLER Curl Command", { curl: curlCommand });
 
   // Tratar erros de validação do Zod
   if (error instanceof ZodError) {

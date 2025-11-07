@@ -1,313 +1,319 @@
 import { eq, sum } from "drizzle-orm";
-import { FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { db } from "../../db/client";
 import { balance, expense, income } from "../../db/schema";
 import { NotFoundError, UnauthorizedError } from "../../errors/app-error";
 import { DrizzleBalanceRepository } from "../../repositories/drizzle/drizzle-balance-repository";
 import { CreateBalanceUseCase } from "../../use-cases/balance/create-balance";
+import { GetBalanceByDateUseCase } from "../../use-cases/balance/get-balance-by-date";
 import {
-  getBalanceByPeriodSchema,
-  GetBalanceByPeriodUseCase,
+	GetBalanceByPeriodUseCase,
+	getBalanceByPeriodSchema,
 } from "../../use-cases/balance/get-balance-by-period";
 import {
-  getDailyBalanceByPeriodSchema,
-  GetDailyBalanceByPeriodUseCase,
+	GetDailyBalanceByPeriodUseCase,
+	getDailyBalanceByPeriodSchema,
 } from "../../use-cases/balance/get-daily-balance-by-period";
-import { GetBalanceByDateUseCase } from "../../use-cases/balance/get-balance-by-date";
 import { ApiResponseBuilder } from "../../utils/api-response";
+import { logJson } from "../../utils/logger";
 import { asyncErrorHandler } from "../middleware/error-handler";
 
 const createBalanceSchema = z.object({
-  amount: z.number().positive(),
-  startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
+	amount: z.number().positive(),
+	startDate: z.coerce.date(),
+	endDate: z.coerce.date(),
 });
 
 const createExpenseSchema = z.object({
-  amount: z.number().int().positive(),
-  description: z.string().min(1),
-  date: z.date(),
-  balanceId: z.uuid(),
+	amount: z.number().int().positive(),
+	description: z.string().min(1),
+	date: z.date(),
+	balanceId: z.uuid(),
 });
 
 const createIncomeSchema = z.object({
-  amount: z.number().int().positive(),
-  description: z.string().min(1),
-  date: z.date(),
-  balanceId: z.uuid(),
+	amount: z.number().int().positive(),
+	description: z.string().min(1),
+	date: z.date(),
+	balanceId: z.uuid(),
 });
 
 const updateBalanceSchema = z.object();
 
 const getBalanceByDateSchema = z.object({
-  date: z.coerce.date().optional(),
+	date: z.coerce.date().optional(),
 });
 
 export class BalanceController {
-  // Criar novo saldo
-  static createBalance = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{ Body: z.infer<typeof createBalanceSchema> }>,
-      reply: FastifyReply
-    ) => {
-      const { amount, endDate, startDate } = createBalanceSchema.parse(
-        request.body
-      );
+	// Criar novo saldo
+	static createBalance = asyncErrorHandler(
+		async (
+			request: FastifyRequest<{ Body: z.infer<typeof createBalanceSchema> }>,
+			reply: FastifyReply,
+		) => {
+			const { amount, endDate, startDate } = createBalanceSchema.parse(
+				request.body,
+			);
 
-      // Usar o usuário autenticado do middleware
-      if (!request.user) {
-        throw new UnauthorizedError("Usuário não está logado");
-      }
+			// Usar o usuário autenticado do middleware
+			if (!request.user) {
+				throw new UnauthorizedError("Usuário não está logado");
+			}
 
-      const createBalanceUseCase = new CreateBalanceUseCase(
-        new DrizzleBalanceRepository()
-      );
+			const createBalanceUseCase = new CreateBalanceUseCase(
+				new DrizzleBalanceRepository(),
+			);
 
-      // Extrair timezone do header se disponível
-      const userTimezone = request.headers["x-timezone"] as string;
+			// Extrair timezone do header se disponível
+			const userTimezone = request.headers["x-timezone"] as string;
 
-      const response = await createBalanceUseCase.execute(
-        {
-          amount: amount.toString(),
-          startDate: startDate,
-          endDate: endDate,
-          userId: request.user.id,
-        },
-        userTimezone
-      );
+			const response = await createBalanceUseCase.execute(
+				{
+					amount: amount.toString(),
+					startDate: startDate,
+					endDate: endDate,
+					userId: request.user.id,
+				},
+				userTimezone,
+			);
 
-      return ApiResponseBuilder.success(
-        reply,
-        response,
-        "Saldo criado com sucesso",
-        201
-      );
-    }
-  );
+			return ApiResponseBuilder.success(
+				reply,
+				response,
+				"Saldo criado com sucesso",
+				201,
+			);
+		},
+	);
 
-  static getBalanceByDate = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{
-        Querystring: z.infer<typeof getBalanceByDateSchema>;
-      }>,
-      reply: FastifyReply
-    ) => {
-      // Usar o usuário autenticado do middleware
-      if (!request.user) {
-        throw new UnauthorizedError("Usuário não está logado");
-      }
+	static getBalanceByDate = asyncErrorHandler(
+		async (
+			request: FastifyRequest<{
+				Querystring: z.infer<typeof getBalanceByDateSchema>;
+			}>,
+			reply: FastifyReply,
+		) => {
+			// Usar o usuário autenticado do middleware
+			if (!request.user) {
+				throw new UnauthorizedError("Usuário não está logado");
+			}
 
-      const { date } = getBalanceByDateSchema.parse(request.query);
+			const { date } = getBalanceByDateSchema.parse(request.query);
 
-      const getBalanceByDateUseCase = new GetBalanceByDateUseCase(
-        new DrizzleBalanceRepository()
-      );
+			const getBalanceByDateUseCase = new GetBalanceByDateUseCase(
+				new DrizzleBalanceRepository(),
+			);
 
-      // Extrair timezone do header se disponível
-      const userTimezone = request.headers["x-timezone"] as string;
+			// Extrair timezone do header se disponível
+			const userTimezone = request.headers["x-timezone"] as string;
 
-      const response = await getBalanceByDateUseCase.execute(
-        request.user.id,
-        userTimezone,
-        date
-      );
+			logJson("GetBalanceByDate Request", {
+				date,
+				userTimezone,
+				userId: request.user.id,
+			});
+			const response = await getBalanceByDateUseCase.execute(
+				request.user.id,
+				userTimezone,
+				date,
+			);
 
-      return ApiResponseBuilder.success(reply, response);
-    }
-  );
+			return ApiResponseBuilder.success(reply, response);
+		},
+	);
 
-  static getBalanceByPeriod = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{
-        Querystring: z.infer<typeof getBalanceByPeriodSchema>;
-      }>,
-      reply: FastifyReply
-    ) => {
-      const { startDate, endDate } = getBalanceByPeriodSchema.parse(
-        request.query
-      );
+	static getBalanceByPeriod = asyncErrorHandler(
+		async (
+			request: FastifyRequest<{
+				Querystring: z.infer<typeof getBalanceByPeriodSchema>;
+			}>,
+			reply: FastifyReply,
+		) => {
+			const { startDate, endDate } = getBalanceByPeriodSchema.parse(
+				request.query,
+			);
 
-      // Usar o usuário autenticado do middleware
-      if (!request.user) {
-        throw new UnauthorizedError("Usuário não está logado");
-      }
-      const getBalanceByPeriodUseCase = new GetBalanceByPeriodUseCase(
-        new DrizzleBalanceRepository()
-      );
+			// Usar o usuário autenticado do middleware
+			if (!request.user) {
+				throw new UnauthorizedError("Usuário não está logado");
+			}
+			const getBalanceByPeriodUseCase = new GetBalanceByPeriodUseCase(
+				new DrizzleBalanceRepository(),
+			);
 
-      // Extrair timezone do header se disponível
-      const userTimezone = request.headers["x-timezone"] as string;
+			// Extrair timezone do header se disponível
+			const userTimezone = request.headers["x-timezone"] as string;
 
-      const response = await getBalanceByPeriodUseCase.execute(
-        startDate,
-        endDate,
-        userTimezone
-      );
-      return ApiResponseBuilder.success(
-        reply,
-        response,
-        "Saldo encontrado com sucesso",
-        200
-      );
-    }
-  );
+			const response = await getBalanceByPeriodUseCase.execute(
+				startDate,
+				endDate,
+				userTimezone,
+			);
+			return ApiResponseBuilder.success(
+				reply,
+				response,
+				"Saldo encontrado com sucesso",
+				200,
+			);
+		},
+	);
 
-  static getDailyBalancesByPeriod = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{
-        Querystring: z.infer<typeof getDailyBalanceByPeriodSchema>;
-      }>,
-      reply: FastifyReply
-    ) => {
-      const { startDate, endDate, balanceId } =
-        getDailyBalanceByPeriodSchema.parse(request.query);
+	static getDailyBalancesByPeriod = asyncErrorHandler(
+		async (
+			request: FastifyRequest<{
+				Querystring: z.infer<typeof getDailyBalanceByPeriodSchema>;
+			}>,
+			reply: FastifyReply,
+		) => {
+			const { startDate, endDate, balanceId } =
+				getDailyBalanceByPeriodSchema.parse(request.query);
 
-      if (!request.user) {
-        throw new UnauthorizedError("Usuário não está logado");
-      }
+			if (!request.user) {
+				throw new UnauthorizedError("Usuário não está logado");
+			}
 
-      const getDailyBalanceByPeriodUseCase = new GetDailyBalanceByPeriodUseCase(
-        new DrizzleBalanceRepository()
-      );
+			const getDailyBalanceByPeriodUseCase = new GetDailyBalanceByPeriodUseCase(
+				new DrizzleBalanceRepository(),
+			);
 
-      // Extrair timezone do header se disponível
-      const userTimezone = request.headers["x-timezone"] as string;
+			// Extrair timezone do header se disponível
+			const userTimezone = request.headers["x-timezone"] as string;
 
-      const response = await getDailyBalanceByPeriodUseCase.execute(
-        startDate,
-        endDate,
-        balanceId,
-        userTimezone
-      );
+			const response = await getDailyBalanceByPeriodUseCase.execute(
+				startDate,
+				endDate,
+				balanceId,
+				userTimezone,
+			);
 
-      return ApiResponseBuilder.success(
-        reply,
-        response,
-        "Saldos diários calculados com sucesso",
-        200
-      );
-    }
-  );
+			return ApiResponseBuilder.success(
+				reply,
+				response,
+				"Saldos diários calculados com sucesso",
+				200,
+			);
+		},
+	);
 
-  // Buscar saldo por ID
-  static getBalanceById = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply
-    ) => {
-      const { id } = request.params;
+	// Buscar saldo por ID
+	static getBalanceById = asyncErrorHandler(
+		async (
+			request: FastifyRequest<{ Params: { id: string } }>,
+			reply: FastifyReply,
+		) => {
+			const { id } = request.params;
 
-      const balanceData = await db
-        .select()
-        .from(balance)
-        .where(eq(balance.id, id))
-        .limit(1);
+			const balanceData = await db
+				.select()
+				.from(balance)
+				.where(eq(balance.id, id))
+				.limit(1);
 
-      if (balanceData.length === 0) {
-        throw new NotFoundError("Saldo não encontrado");
-      }
+			if (balanceData.length === 0) {
+				throw new NotFoundError("Saldo não encontrado");
+			}
 
-      return ApiResponseBuilder.success(reply, balanceData[0]);
-    }
-  );
+			return ApiResponseBuilder.success(reply, balanceData[0]);
+		},
+	);
 
-  // Listar todos os saldos do usuário
-  static getUserBalances = asyncErrorHandler(
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      // Usar o usuário autenticado do middleware
-      if (!request.user) {
-        throw new UnauthorizedError("Usuário não está logado");
-      }
+	// Listar todos os saldos do usuário
+	static getUserBalances = asyncErrorHandler(
+		async (request: FastifyRequest, reply: FastifyReply) => {
+			// Usar o usuário autenticado do middleware
+			if (!request.user) {
+				throw new UnauthorizedError("Usuário não está logado");
+			}
 
-      const balances = await db
-        .select()
-        .from(balance)
-        .where(eq(balance.userId, request.user.id))
-        .orderBy(balance.startDate);
+			const balances = await db
+				.select()
+				.from(balance)
+				.where(eq(balance.userId, request.user.id))
+				.orderBy(balance.startDate);
 
-      // Para cada balance, buscar a soma dos valores de incomes e expenses
-      const balancesWithSums = await Promise.all(
-        balances.map(async (balanceItem) => {
-          const [incomeSum, expenseSum] = await Promise.all([
-            db
-              .select({ total: sum(income.amount) })
-              .from(income)
-              .where(eq(income.balanceId, balanceItem.id)),
-            db
-              .select({ total: sum(expense.amount) })
-              .from(expense)
-              .where(eq(expense.balanceId, balanceItem.id)),
-          ]);
+			// Para cada balance, buscar a soma dos valores de incomes e expenses
+			const balancesWithSums = await Promise.all(
+				balances.map(async (balanceItem) => {
+					const [incomeSum, expenseSum] = await Promise.all([
+						db
+							.select({ total: sum(income.amount) })
+							.from(income)
+							.where(eq(income.balanceId, balanceItem.id)),
+						db
+							.select({ total: sum(expense.amount) })
+							.from(expense)
+							.where(eq(expense.balanceId, balanceItem.id)),
+					]);
 
-          return {
-            ...balanceItem,
-            totalIncomes: Number(incomeSum[0]?.total) || 0,
-            totalExpenses: Number(expenseSum[0]?.total) || 0,
-          };
-        })
-      );
+					return {
+						...balanceItem,
+						totalIncomes: Number(incomeSum[0]?.total) || 0,
+						totalExpenses: Number(expenseSum[0]?.total) || 0,
+					};
+				}),
+			);
 
-      return ApiResponseBuilder.success(reply, balancesWithSums);
-    }
-  );
+			return ApiResponseBuilder.success(reply, balancesWithSums);
+		},
+	);
 
-  // Atualizar saldo
-  static updateBalance = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{
-        Params: { id: string };
-        Body: z.infer<typeof updateBalanceSchema>;
-      }>,
-      reply: FastifyReply
-    ) => {
-      const { id } = request.params;
-      const updateData = updateBalanceSchema.parse(request.body);
+	// Atualizar saldo
+	static updateBalance = asyncErrorHandler(
+		async (
+			request: FastifyRequest<{
+				Params: { id: string };
+				Body: z.infer<typeof updateBalanceSchema>;
+			}>,
+			reply: FastifyReply,
+		) => {
+			const { id } = request.params;
+			const updateData = updateBalanceSchema.parse(request.body);
 
-      const updatedBalance = await db
-        .update(balance)
-        .set({
-          ...updateData,
-          startDate: updateData.startDate
-            ? new Date(updateData.startDate)
-            : undefined,
-          endDate: updateData.endDate
-            ? new Date(updateData.endDate)
-            : undefined,
-        })
-        .where(eq(balance.id, id))
-        .returning();
+			const updatedBalance = await db
+				.update(balance)
+				.set({
+					...updateData,
+					startDate: updateData.startDate
+						? new Date(updateData.startDate)
+						: undefined,
+					endDate: updateData.endDate
+						? new Date(updateData.endDate)
+						: undefined,
+				})
+				.where(eq(balance.id, id))
+				.returning();
 
-      if (updatedBalance.length === 0) {
-        throw new NotFoundError("Saldo não encontrado");
-      }
+			if (updatedBalance.length === 0) {
+				throw new NotFoundError("Saldo não encontrado");
+			}
 
-      return ApiResponseBuilder.success(
-        reply,
-        updatedBalance[0],
-        "Saldo atualizado com sucesso"
-      );
-    }
-  );
+			return ApiResponseBuilder.success(
+				reply,
+				updatedBalance[0],
+				"Saldo atualizado com sucesso",
+			);
+		},
+	);
 
-  // Deletar saldo
-  static deleteBalance = asyncErrorHandler(
-    async (
-      request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply
-    ) => {
-      const { id } = request.params;
+	// Deletar saldo
+	static deleteBalance = asyncErrorHandler(
+		async (
+			request: FastifyRequest<{ Params: { id: string } }>,
+			reply: FastifyReply,
+		) => {
+			const { id } = request.params;
 
-      const deletedBalance = await db
-        .delete(balance)
-        .where(eq(balance.id, id))
-        .returning();
+			const deletedBalance = await db
+				.delete(balance)
+				.where(eq(balance.id, id))
+				.returning();
 
-      if (deletedBalance.length === 0) {
-        throw new NotFoundError("Saldo não encontrado");
-      }
+			if (deletedBalance.length === 0) {
+				throw new NotFoundError("Saldo não encontrado");
+			}
 
-      return reply.status(204).send();
-    }
-  );
+			return reply.status(204).send();
+		},
+	);
 }

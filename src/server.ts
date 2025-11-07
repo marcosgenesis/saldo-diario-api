@@ -5,6 +5,7 @@ import { auth } from "./auth"; // Your configured Better Auth instance
 import { errorHandler } from "./http/middleware/error-handler.js";
 import { requestLoggerPlugin } from "./http/middleware/request-logger.js";
 import { registerRoutes } from "./http/routes/index.js";
+import { logError, logInfo, logRequest } from "./utils/logger.js";
 
 const fastify = Fastify({
   logger: {
@@ -81,8 +82,9 @@ fastify.route({
         return;
       }
 
-      console.log(`Auth request: ${request.method} ${request.url}`);
-      console.log("Headers:", request.headers);
+      logRequest(request.method, request.url, {
+        headers: request.headers,
+      });
       // Construct request URL
       const url = new URL(request.url, `http://${request.headers.host}`);
 
@@ -124,7 +126,7 @@ fastify.route({
       );
       reply.send(response.body ? await response.text() : null);
     } catch (error: any) {
-      console.error("Authentication Error:", error);
+      logError("Authentication Error", error);
       reply.status(500).send({
         error: "Internal authentication error",
         code: "AUTH_FAILURE",
@@ -147,9 +149,12 @@ fastify.listen(
   { port: Number(process.env.PORT) || 4000, host: "0.0.0.0" },
   (err) => {
     if (err) {
-      console.error(err);
+      logError("Server Startup Error", err);
       process.exit(1);
     }
-    console.log(`Server running on port ${process.env.PORT || 4000}`);
+    logInfo("Server Started", {
+      port: process.env.PORT || 4000,
+      environment: process.env.NODE_ENV || "development",
+    });
   }
 );

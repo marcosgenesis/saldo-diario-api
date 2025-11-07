@@ -1,5 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { auth } from "../../auth.js";
+import { logError } from "../../utils/logger.js";
 
 export async function authMiddleware(
   request: FastifyRequest,
@@ -39,7 +40,7 @@ export async function authMiddleware(
     (request as any).user = session.user;
     (request as any).session = session;
   } catch (error) {
-    console.error("Erro na autenticação:", error);
+    logError("Authentication Middleware Error", error);
     return reply.status(401).send({
       error: "Erro na autenticação",
       message: "Usuário não está logado",
